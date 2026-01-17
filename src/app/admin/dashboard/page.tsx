@@ -21,7 +21,8 @@ import {
     DollarSign,
     Save,
     MessageCircle,
-    GripVertical
+    GripVertical,
+    Globe // Added Globe icon
 } from 'lucide-react';
 
 // --- Types ---
@@ -104,6 +105,18 @@ type HomeContent = {
     active?: boolean;
 };
 
+type SiteSettings = {
+    id?: number;
+    site_title: string;
+    site_description: string;
+    keywords: string;
+    google_verification_code?: string;
+    business_name: string;
+    city: string;
+    state: string;
+    phone: string;
+};
+
 export default function AdminDashboard() {
     const router = useRouter();
     const [activeTab, setActiveTab] = useState('overview');
@@ -114,6 +127,17 @@ export default function AdminDashboard() {
     const [heroSlides, setHeroSlides] = useState<HeroSlide[]>([]);
     const [homeContent, setHomeContent] = useState<HomeContent[]>([]);
     const [reviews, setReviews] = useState<Review[]>([]);
+
+    // SEO State
+    const [settings, setSettings] = useState<SiteSettings>({
+        site_title: 'La Vibe Fit',
+        site_description: '',
+        keywords: '',
+        business_name: 'La Vibe Fit',
+        city: 'Manaus',
+        state: 'AM',
+        phone: ''
+    });
 
     // UI States
     const [loading, setLoading] = useState(true);
@@ -156,7 +180,8 @@ export default function AdminDashboard() {
             fetchHeroSlides(),
             fetchHomeContent(),
             fetchReviews(),
-            fetchGlobalSettings()
+            fetchGlobalSettings(),
+            fetchSettings()
         ]);
         setLoading(false);
     };
@@ -407,6 +432,24 @@ export default function AdminDashboard() {
         if (activeData) setTopBarActive(activeData.value === 'true');
     };
 
+    const fetchSettings = async () => {
+        const { data, error } = await supabase.from('site_settings').select('*').single();
+        if (data) setSettings(data);
+    };
+
+    const saveSettings = async () => {
+        setLoading(true);
+        // Tenta update, se id existir (sempre será 1)
+        const { error } = await supabase.from('site_settings').upsert({ id: 1, ...settings });
+        setLoading(false);
+
+        if (error) {
+            console.error(error);
+            alert(`Erro ao salvar SEO: ${error.message}. (Verifique se executou o SQL de migração)`);
+        } else {
+            alert('Configurações SEO salvas com sucesso!');
+        }
+    };
 
 
     const sendWhatsApp = (order: Order) => {
@@ -475,6 +518,7 @@ export default function AdminDashboard() {
                         { id: 'reviews', icon: MessageCircle, label: 'Avaliações' },
                         { id: 'slides', icon: Images, label: 'Banner / Slides' },
                         { id: 'offers', icon: LayoutTemplate, label: 'Conteúdo Home' },
+                        { id: 'seo', icon: Globe, label: 'SEO & Google' },
                     ].map(item => (
                         <button
                             key={item.id}
@@ -1157,6 +1201,102 @@ export default function AdminDashboard() {
                                 </div>
                             )
                         })()}
+                    </div>
+                )}
+
+                {/* --- SEO TAB --- */}
+                {activeTab === 'seo' && (
+                    <div className="bg-white rounded-lg shadow border border-gray-200 overflow-hidden animate-fadeIn">
+                        <div className="p-6 border-b bg-gray-50 flex justify-between items-center">
+                            <div>
+                                <h2 className="text-xl font-bold text-gray-800">Otimização SEO (Google)</h2>
+                                <p className="text-sm text-gray-500">Configure como sua loja aparece nas buscas do Google.</p>
+                            </div>
+                            <button onClick={saveSettings} disabled={loading} className="bg-green-600 text-white px-6 py-2 rounded font-bold hover:bg-green-700 disabled:opacity-50">
+                                {loading ? 'SALVANDO...' : 'SALVAR ALTERAÇÕES'}
+                            </button>
+                        </div>
+                        <div className="p-8 space-y-8">
+
+                            {/* Meta Tags */}
+                            <section className="space-y-4">
+                                <h3 className="font-bold text-lg flex items-center gap-2"><Globe className="text-blue-500" size={20} /> Informações Principais (Meta Tags)</h3>
+                                <div className="grid gap-6 p-6 bg-gray-50 rounded border">
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-700 mb-1">Título do Site (Google Title)</label>
+                                        <input
+                                            className="w-full p-2 border rounded"
+                                            value={settings.site_title}
+                                            onChange={e => setSettings({ ...settings, site_title: e.target.value })}
+                                            placeholder="Ex: La Vibe Fit - Moda Fitness em Manaus"
+                                        />
+                                        <p className="text-xs text-gray-400 mt-1">O título principal que aparece na aba do navegador e no link azul do Google.</p>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-700 mb-1">Descrição (Meta Description)</label>
+                                        <textarea
+                                            rows={3}
+                                            className="w-full p-2 border rounded"
+                                            value={settings.site_description}
+                                            onChange={e => setSettings({ ...settings, site_description: e.target.value })}
+                                            placeholder="Ex: A melhor loja de moda fitness de Manaus. Leggings, Tops e Conjuntos..."
+                                        />
+                                        <p className="text-xs text-gray-400 mt-1">O texto cinza que aparece abaixo do link no Google. Use palavras atrativas.</p>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-700 mb-1">Palavras-Chave (Keywords)</label>
+                                        <input
+                                            className="w-full p-2 border rounded"
+                                            value={settings.keywords}
+                                            onChange={e => setSettings({ ...settings, keywords: e.target.value })}
+                                            placeholder="Ex: moda fitness, manaus, legging, academia, roupa feminina"
+                                        />
+                                        <p className="text-xs text-gray-400 mt-1">Separe por vírgulas. Ajuda o Google a entender o nicho.</p>
+                                    </div>
+                                </div>
+                            </section>
+
+                            {/* Local SEO */}
+                            <section className="space-y-4">
+                                <h3 className="font-bold text-lg flex items-center gap-2"><Users className="text-orange-500" size={20} /> SEO Local (Para clientes de Manaus)</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-gray-50 rounded border">
+                                    <div className="md:col-span-2">
+                                        <label className="block text-sm font-bold text-gray-700 mb-1">Nome do Negócio</label>
+                                        <input
+                                            className="w-full p-2 border rounded"
+                                            value={settings.business_name}
+                                            onChange={e => setSettings({ ...settings, business_name: e.target.value })}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-700 mb-1">Cidade Principal</label>
+                                        <input
+                                            className="w-full p-2 border rounded"
+                                            value={settings.city}
+                                            onChange={e => setSettings({ ...settings, city: e.target.value })}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-700 mb-1">Estado (Sigla)</label>
+                                        <input
+                                            className="w-full p-2 border rounded"
+                                            value={settings.state}
+                                            onChange={e => setSettings({ ...settings, state: e.target.value })}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-700 mb-1">WhatsApp / Telefone Público</label>
+                                        <input
+                                            className="w-full p-2 border rounded"
+                                            value={settings.phone}
+                                            onChange={e => setSettings({ ...settings, phone: e.target.value })}
+                                            placeholder="55929..."
+                                        />
+                                        <p className="text-xs text-gray-400 mt-1">Usado para indexação de contato.</p>
+                                    </div>
+                                </div>
+                            </section>
+                        </div>
                     </div>
                 )}
 
