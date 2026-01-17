@@ -211,6 +211,9 @@ export default function ProductPage() {
                                 alt={product.name}
                                 fill
                                 className="object-cover"
+                                priority
+                                sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 600px"
+                                quality={85}
                             />
                             {hasDiscount && (
                                 <span className="absolute top-4 right-4 bg-[#DD3468] text-white text-xs font-bold px-3 py-1 uppercase rounded">
@@ -229,7 +232,7 @@ export default function ProductPage() {
                                         className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all ${selectedImageIndex === idx ? 'border-[#DD3468]' : 'border-transparent'
                                             }`}
                                     >
-                                        <Image src={img} alt={`${product.name} ${idx + 1}`} fill className="object-cover" />
+                                        <Image src={img} alt={`${product.name} ${idx + 1}`} fill className="object-cover" sizes="(max-width: 768px) 25vw, 150px" loading="lazy" />
                                     </button>
                                 ))}
                             </div>

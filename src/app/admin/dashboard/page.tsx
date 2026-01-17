@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import imageCompression from 'browser-image-compression';
 import { runSeoAudit, SeoScore } from '@/services/seoAuditor'; // Import Auditor
 import {
     LayoutDashboard,
@@ -270,10 +271,24 @@ export default function AdminDashboard() {
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, bucket: string): Promise<string | null> => {
         if (!e.target.files?.length) return null;
-        const file = e.target.files[0];
-        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${file.name.split('.').pop()}`;
+        const originalFile = e.target.files[0];
         setUploading(true);
 
+        // Compress image before upload
+        let file = originalFile;
+        try {
+            const options = {
+                maxSizeMB: 0.8,
+                maxWidthOrHeight: 1920,
+                useWebWorker: true
+            };
+            file = await imageCompression(originalFile, options);
+        } catch (compressionError) {
+            console.error('Erro na compressão:', compressionError);
+            // Continue with original file if compression fails
+        }
+
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${file.name.split('.').pop()}`;
         const { error } = await supabase.storage.from(bucket).upload(fileName, file);
         if (error) {
             alert('Erro no upload: ' + error.message);
@@ -1492,8 +1507,22 @@ export default function AdminDashboard() {
                                                         const newImages = [...(editingProduct.images || [])];
 
                                                         for (let i = 0; i < e.target.files.length; i++) {
-                                                            const file = e.target.files[i];
-                                                            const fileName = `gallery-${Date.now()}-${file.name}`;
+                                                            const originalFile = e.target.files[i];
+
+                                                            // Compress image
+                                                            let file = originalFile;
+                                                            try {
+                                                                const options = {
+                                                                    maxSizeMB: 0.8,
+                                                                    maxWidthOrHeight: 1920,
+                                                                    useWebWorker: true
+                                                                };
+                                                                file = await imageCompression(originalFile, options);
+                                                            } catch (compressionError) {
+                                                                console.error('Erro na compressão:', compressionError);
+                                                            }
+
+                                                            const fileName = `gallery-${Date.now()}-${Math.random().toString(36).substring(7)}-${file.name}`;
                                                             const { error } = await supabase.storage.from('products').upload(fileName, file);
 
                                                             if (!error) {
