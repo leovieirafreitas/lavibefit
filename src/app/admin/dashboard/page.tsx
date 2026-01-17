@@ -316,7 +316,7 @@ export default function AdminDashboard() {
             title: editingSlide.title || '',
             subtitle: editingSlide.subtitle || '',
             image_url: editingSlide.image_url,
-            // mobile_image_url: editingSlide.mobile_image_url, // TODO: Uncomment after DB migration
+            mobile_image_url: editingSlide.mobile_image_url,
             link: editingSlide.link_url, // Adjusted to match DB column 'link'
             button_text: editingSlide.button_text || 'Ver Agora',
             active: editingSlide.active !== undefined ? editingSlide.active : true,
@@ -329,7 +329,7 @@ export default function AdminDashboard() {
 
         if (error) {
             console.error('Erro salvar slide:', error);
-            alert('Erro ao salvar slide. Verifique se todos os campos estão preenchidos.');
+            alert(`Erro ao salvar slide: ${error.message}.\nSe o erro for sobre "column mobile_image_url", execute o script SQL fornecido.`);
         } else {
             setIsSlideModalOpen(false);
             fetchHeroSlides();
