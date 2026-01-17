@@ -17,7 +17,7 @@ export default function Navbar({ initialTopBarText }: { initialTopBarText?: stri
     const [searchResults, setSearchResults] = useState<any[]>([]);
     const [searchLoading, setSearchLoading] = useState(false);
     const [topBarText, setTopBarText] = useState(initialTopBarText || '');
-    const [isTopBarVisible, setIsTopBarVisible] = useState(true);
+    const [isTopBarVisible, setIsTopBarVisible] = useState(false);
     const { getTotalItems } = useCart();
     const { getTotalFavorites } = useFavorites();
 
