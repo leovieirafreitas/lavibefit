@@ -503,7 +503,16 @@ export default function AdminDashboard() {
             setPageSpeedScore({ mobile: Math.round(scoreMobile), desktop: Math.round(scoreDesktop) });
         } catch (e: any) {
             console.error(e);
-            alert(`Erro ao consultar Google PageSpeed: ${e.message}`);
+
+            // Tratamento amigável para limite de cota
+            if (e.message.includes('Quota exceeded') || e.message.includes('429')) {
+                const abrirComLink = confirm('O limite de consultas grátis do Google foi atingido hoje. Deseja abrir o teste diretamente no site do Google PageSpeed?');
+                if (abrirComLink) {
+                    window.open(`https://pagespeed.web.dev/analysis?url=${encodeURIComponent(urlToTest)}`, '_blank');
+                }
+            } else {
+                alert(`Erro ao consultar Google PageSpeed: ${e.message}`);
+            }
         } finally {
             setAnalyzingSpeed(false);
         }
@@ -559,6 +568,7 @@ export default function AdminDashboard() {
                             src="/logosite.png"
                             alt="La Vibe Fit"
                             fill
+                            sizes="(max-width: 768px) 100vw, 256px"
                             className="object-contain"
                             priority
                         />
