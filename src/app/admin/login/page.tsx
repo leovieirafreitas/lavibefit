@@ -43,7 +43,7 @@ export default function AdminLogin() {
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-[#DD3468] focus:border-[#DD3468] outline-none"
-                            placeholder="admin@lavibefit.com"
+                            placeholder="contato@lavibefit.com.br"
                             required
                         />
                     </div>

@@ -15,7 +15,7 @@ export default function Footer() {
                             <h4 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">Navegação</h4>
                             <ul className="space-y-2 text-sm font-medium text-gray-300">
                                 <li><Link href="/" className="hover:text-[#DD3468] transition-colors">Página Inicial</Link></li>
-                                <li><Link href="/feminino/novidades" className="hover:text-[#DD3468] transition-colors">Lançamentos</Link></li>
+                                <li><Link href="/lancamentos" className="hover:text-[#DD3468] transition-colors">Lançamentos</Link></li>
                                 <li><Link href="/feminino/conjuntos" className="hover:text-[#DD3468] transition-colors">Conjuntos</Link></li>
                             </ul>
                         </div>
@@ -77,11 +77,13 @@ export default function Footer() {
                         <div>
                             <h4 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">Nos siga nas redes sociais</h4>
                             <div className="flex gap-4">
-                                <a href="#" className="w-10 h-10 bg-[#DD3468] rounded-full flex items-center justify-center text-white hover:bg-white hover:text-black transition-all">
+                                <a
+                                    href="https://www.instagram.com/lavibefit/"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="w-10 h-10 bg-[#DD3468] rounded-full flex items-center justify-center text-white hover:bg-white hover:text-black transition-all"
+                                >
                                     <Instagram className="w-5 h-5" />
-                                </a>
-                                <a href="#" className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white hover:bg-white hover:text-black transition-all">
-                                    <Facebook className="w-5 h-5" />
                                 </a>
                             </div>
                         </div>
