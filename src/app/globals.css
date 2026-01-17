@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+
+
+:root {
+  /* Divina Fitness Inspired Colors */
+  --primary: #000000;
+  /* Primary Black */
+  --accent: #DD3468;
+  /* Atara Pink */
+
+  --text-main: #111827;
+  /* Dark Gray */
+  --text-secondary: #6B7280;
+  /* Medium Gray */
+  --text-inverse: #FFFFFF;
+
+  --bg-body: #FFFFFF;
+  --bg-surface: #F9FAFB;
+
+  --border-color: #F3F4F6;
+
+  --radius-none: 0px;
+  /* Sharp Edges */
+  --radius-sm: 2px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Montserrat', sans-serif;
+  background-color: var(--bg-body);
+  color: var(--text-main);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+input {
+  outline: none;
+}
