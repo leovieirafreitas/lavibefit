@@ -316,6 +316,7 @@ export default function AdminDashboard() {
             title: editingSlide.title,
             subtitle: editingSlide.subtitle,
             image_url: editingSlide.image_url,
+            mobile_image_url: editingSlide.mobile_image_url, // Added mobile image
             link: editingSlide.link_url, // Adjusted to match DB column 'link'
             button_text: editingSlide.button_text || 'Ver Agora',
             active: editingSlide.active !== undefined ? editingSlide.active : true,
@@ -1420,36 +1421,59 @@ export default function AdminDashboard() {
             {/* SLIDE MODAL */}
             {isSlideModalOpen && editingSlide && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
-                    <div className="bg-white rounded-lg p-6 w-full max-w-lg">
-                        <h3 className="font-bold mb-4">Editar Slide</h3>
-                        <div className="space-y-4">
-                            <div className="h-32 bg-gray-100 rounded flex items-center justify-center relative overflow-hidden">
-                                {editingSlide.image_url && <Image src={editingSlide.image_url} alt="preview" fill className="object-cover" />}
-                                <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={async e => { const url = await handleFileUpload(e, 'banners'); if (url) setEditingSlide({ ...editingSlide, image_url: url }) }} />
-                                {!editingSlide.image_url && <span className="text-xs text-gray-500">Clique para upload da imagem</span>}
+                    <div className="bg-white rounded-lg p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+                        <h3 className="font-bold mb-4">Editar Banner Rotativo</h3>
+                        <div className="space-y-6">
+
+                            {/* Desktop Image */}
+                            <div>
+                                <label className="block text-xs font-bold uppercase mb-2">
+                                    Imagem Desktop (PC) <span className="text-gray-400 font-normal ml-1">(Rec: 1800x900px)</span>
+                                </label>
+                                <div className="aspect-[2/1] bg-gray-100 rounded border-2 border-dashed border-gray-300 flex items-center justify-center relative overflow-hidden hover:border-black transition-colors">
+                                    {editingSlide.image_url ?
+                                        <Image src={editingSlide.image_url} alt="preview" fill className="object-cover" /> :
+                                        <div className="text-center">
+                                            <ImageIcon className="mx-auto text-gray-300 mb-1" />
+                                            <span className="text-xs text-gray-400">Upload Desktop</span>
+                                        </div>
+                                    }
+                                    <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={async e => { const url = await handleFileUpload(e, 'banners'); if (url) setEditingSlide({ ...editingSlide, image_url: url }) }} />
+                                </div>
                             </div>
-                            <input className="w-full p-2 border rounded" placeholder="Título (Ex: NOVA COLEÇÃO)" value={editingSlide.title} onChange={e => setEditingSlide({ ...editingSlide, title: e.target.value })} />
-                            <input className="w-full p-2 border rounded" placeholder="Subtítulo (Ex: Treine com estilo)" value={editingSlide.subtitle} onChange={e => setEditingSlide({ ...editingSlide, subtitle: e.target.value })} />
+
+                            {/* Mobile Image */}
+                            <div>
+                                <label className="block text-xs font-bold uppercase mb-2">
+                                    Imagem Mobile (Celular) <span className="text-gray-400 font-normal ml-1">(Rec: 1080x1080px)</span>
+                                </label>
+                                <div className="aspect-square w-1/2 bg-gray-100 rounded border-2 border-dashed border-gray-300 flex items-center justify-center relative overflow-hidden hover:border-black transition-colors">
+                                    {editingSlide.mobile_image_url ?
+                                        <Image src={editingSlide.mobile_image_url} alt="preview mobile" fill className="object-cover" /> :
+                                        <div className="text-center">
+                                            <ImageIcon className="mx-auto text-gray-300 mb-1" />
+                                            <span className="text-xs text-gray-400">Upload Mobile</span>
+                                        </div>
+                                    }
+                                    <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={async e => { const url = await handleFileUpload(e, 'banners'); if (url) setEditingSlide({ ...editingSlide, mobile_image_url: url }) }} />
+                                </div>
+                                <p className="text-[10px] text-gray-500 mt-1">* Se não enviar mobile, usará a de desktop cortada.</p>
+                            </div>
+
                             <div>
                                 <label className="block text-xs font-bold uppercase mb-1">Link de Destino</label>
-                                <select
+                                <input
                                     className="w-full p-2 border rounded"
+                                    placeholder="Ex: /colecao-nova ou https://..."
                                     value={editingSlide.link_url || ''}
                                     onChange={e => setEditingSlide({ ...editingSlide, link_url: e.target.value })}
-                                >
-                                    <option value="">Selecione uma Página...</option>
-                                    <option value="/lancamentos">Lançamentos</option>
-                                    <option value="/feminino/tops">Tops</option>
-                                    <option value="/feminino/leggings">Leggings</option>
-                                    <option value="/feminino/shorts">Shorts</option>
-                                    <option value="/feminino/conjuntos">Conjuntos</option>
-                                    <option value="/blusas-regatas">Blusas e Regatas</option>
-                                    <option value="/combos">Combos</option>
-                                </select>
+                                />
+                                <p className="text-[10px] text-gray-400 mt-1">Cole um link externo ou use rotas internas como '/feminino/leggings'</p>
                             </div>
-                            <button onClick={saveSlide} className="w-full bg-black text-white py-2 rounded font-bold">SALVAR SLIDE</button>
+
+                            <button onClick={saveSlide} className="w-full bg-black text-white py-3 rounded font-bold hover:bg-gray-800 transition-colors">SALVAR SLIDE</button>
                         </div>
-                        <button onClick={() => setIsSlideModalOpen(false)} className="w-full mt-2 text-sm text-gray-500">Cancelar</button>
+                        <button onClick={() => setIsSlideModalOpen(false)} className="w-full mt-3 text-sm text-gray-500 hover:text-black">Cancelar</button>
                     </div>
                 </div>
             )}
