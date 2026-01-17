@@ -1462,13 +1462,23 @@ export default function AdminDashboard() {
 
                             <div>
                                 <label className="block text-xs font-bold uppercase mb-1">Link de Destino</label>
-                                <input
+                                <select
                                     className="w-full p-2 border rounded"
-                                    placeholder="Ex: /colecao-nova ou https://..."
                                     value={editingSlide.link_url || ''}
                                     onChange={e => setEditingSlide({ ...editingSlide, link_url: e.target.value })}
-                                />
-                                <p className="text-[10px] text-gray-400 mt-1">Cole um link externo ou use rotas internas como '/feminino/leggings'</p>
+                                >
+                                    <option value="">-- Selecione o Destino --</option>
+                                    <option value="/lancamentos">Lançamentos (Novidades)</option>
+                                    <option value="/feminino/leggings">Leggings</option>
+                                    <option value="/feminino/shorts">Shorts</option>
+                                    <option value="/feminino/tops">Tops</option>
+                                    <option value="/feminino/conjuntos">Conjuntos</option>
+                                    <option value="/blusas-regatas">Blusas e Regatas</option>
+                                    <option value="/acessorios">Acessórios</option>
+                                    <option value="/combos">Combos</option>
+                                    <option value="/">Página Inicial</option>
+                                </select>
+                                <p className="text-[10px] text-gray-400 mt-1">Ao clicar no banner, o cliente será levado para esta página.</p>
                             </div>
 
                             <button onClick={saveSlide} className="w-full bg-black text-white py-3 rounded font-bold hover:bg-gray-800 transition-colors">SALVAR SLIDE</button>
