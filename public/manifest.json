@@ -1,0 +1,55 @@
+{
+    "name": "La Vibe Fit - Moda Fitness e Acessórios",
+    "short_name": "La Vibe Fit",
+    "description": "Sua loja preferida de roupas fitness com estilo e performance.",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#0052A3",
+    "theme_color": "#0052A3",
+    "orientation": "portrait-primary",
+    "icons": [
+        {
+            "src": "/icon-192x192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/icon-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ],
+    "categories": [
+        "shopping",
+        "lifestyle"
+    ],
+    "screenshots": [],
+    "shortcuts": [
+        {
+            "name": "Novidades",
+            "short_name": "Novidades",
+            "description": "Ver os lançamentos mais recentes",
+            "url": "/lancamentos",
+            "icons": [
+                {
+                    "src": "/icon-192x192.png",
+                    "sizes": "192x192"
+                }
+            ]
+        },
+        {
+            "name": "Favoritos",
+            "short_name": "Favoritos",
+            "description": "Ver seus produtos favoritos",
+            "url": "/favoritos",
+            "icons": [
+                {
+                    "src": "/icon-192x192.png",
+                    "sizes": "192x192"
+                }
+            ]
+        }
+    ]
+}
