@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useCart } from '@/contexts/CartContext';
@@ -8,7 +8,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { CheckCircle, Clock, Copy, ExternalLink } from 'lucide-react';
 
-export default function SuccessPage() {
+function SuccessContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const { clearCart } = useCart();
@@ -126,147 +126,151 @@ CEP: ${order.address_zipcode}`;
 
     if (!order) {
         return (
-            <main className="min-h-screen bg-white">
-                <Navbar />
-                <div className="pt-32 pb-12 container mx-auto px-6 text-center">
-                    <p>Carregando...</p>
-                </div>
-                <Footer />
-            </main>
+            <div className="pt-32 pb-12 container mx-auto px-6 text-center">
+                <p>Carregando...</p>
+            </div>
         );
     }
 
     const isApproved = order.payment_status === 'approved';
-    const isPix = order.payment_method === 'pix';
-    const isTicket = order.payment_method === 'bolbradesco' || order.payment_method === 'pec'; // Common ticket methods
 
+    return (
+        <div className="pt-32 pb-12 container mx-auto px-6 max-w-2xl">
+            <div className="text-center">
+                {isApproved ? (
+                    <CheckCircle className="w-20 h-20 text-green-500 mx-auto mb-6" />
+                ) : (
+                    <Clock className="w-20 h-20 text-yellow-500 mx-auto mb-6" />
+                )}
+
+                <h1 className="text-3xl font-bold mb-4">
+                    {isApproved ? 'Pagamento Confirmado!' : 'Pedido Realizado!'}
+                </h1>
+                <p className="text-gray-600 mb-2">Número do pedido: <strong>#{order.order_number}</strong></p>
+                <p className="text-gray-600 mb-8">
+                    Obrigado pela sua compra, {order.customer_name}!
+                </p>
+
+                <div className="bg-gray-50 rounded-lg p-6 mb-8">
+                    <h2 className="font-bold text-lg mb-4">Resumo do Pedido</h2>
+                    <div className="space-y-2 text-left">
+                        {order.items.map((item: any, idx: number) => (
+                            <div key={idx} className="flex justify-between">
+                                <span>{item.quantity}x {item.title}</span>
+                                <span className="font-bold">R$ {(item.unit_price * item.quantity).toFixed(2)}</span>
+                            </div>
+                        ))}
+                        <div className="border-t pt-2 flex justify-between font-bold text-lg">
+                            <span>Total:</span>
+                            <span>R$ {order.total.toFixed(2)}</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Show Auto-Redirect info ONLY if approved */}
+                {isApproved && (
+                    <div className="bg-green-50 border-2 border-green-500 rounded-lg p-6 mb-6">
+                        <p className="font-bold text-green-700 mb-2">
+                            Redirecionando para WhatsApp em {countdown} segundos...
+                        </p>
+                        <p className="text-sm text-gray-600">
+                            Você será direcionado para confirmar os detalhes da entrega.
+                        </p>
+                    </div>
+                )}
+
+                {!isApproved && (
+                    <div className="bg-yellow-50 border-2 border-yellow-500 rounded-lg p-6 mb-6">
+                        <h3 className="font-bold text-yellow-800 text-lg mb-2">
+                            Aguardando Pagamento
+                        </h3>
+                        <p className="text-sm text-gray-700 mb-4">
+                            Seu pedido foi gerado. Realize o pagamento para confirmar.
+                        </p>
+
+                        {/* PIX Payment Info */}
+                        {order.qr_code_base64 && (
+                            <div className="bg-white p-4 rounded shadow-sm mb-4">
+                                <p className="text-sm font-bold mb-2 text-gray-800">Escaneie o QR Code PIX:</p>
+                                <img
+                                    src={`data:image/png;base64,${order.qr_code_base64}`}
+                                    alt="QR Code PIX"
+                                    className="w-48 h-48 mx-auto mb-4 border"
+                                />
+                                <div className="relative">
+                                    <textarea
+                                        readOnly
+                                        className="w-full text-xs p-2 bg-gray-100 border rounded h-20 resize-none font-mono"
+                                        value={order.qr_code}
+                                    />
+                                    <button
+                                        onClick={copyPix}
+                                        className="mt-2 flex items-center justify-center gap-2 w-full bg-[#DD3468] text-white py-2 rounded font-bold hover:bg-[#c42d5c]"
+                                    >
+                                        <Copy size={16} />
+                                        {copied ? 'Copiado!' : 'Copiar Código PIX'}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Ticket / Link Payment Info */}
+                        {order.ticket_url && !order.qr_code_base64 && (
+                            <div className="mt-4">
+                                <a
+                                    href={order.ticket_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center justify-center gap-2 bg-blue-600 text-white w-full py-3 rounded font-bold hover:bg-blue-700"
+                                >
+                                    <ExternalLink size={20} />
+                                    Abrir Boleto / Link de Pagamento
+                                </a>
+                            </div>
+                        )}
+
+                        {/* Fallback if no specific payment info but pending status */}
+                        {!order.ticket_url && !order.qr_code_base64 && (
+                            <p className="text-sm text-red-500 mt-2">
+                                Se você já realizou o pagamento, aguarde a confirmação.
+                            </p>
+                        )}
+                    </div>
+                )}
+
+                {isApproved && (
+                    <button
+                        onClick={redirectToWhatsApp}
+                        className="bg-green-500 text-white px-8 py-4 rounded-lg font-bold hover:bg-green-600 transition-colors"
+                    >
+                        Ir para WhatsApp Agora
+                    </button>
+                )}
+
+                <div className="mt-6">
+                    <button
+                        onClick={() => router.push('/')}
+                        className="text-[#DD3468] hover:underline"
+                    >
+                        Voltar para a loja
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+export default function SuccessPage() {
     return (
         <main className="min-h-screen bg-white">
             <Navbar />
-
-            <div className="pt-32 pb-12 container mx-auto px-6 max-w-2xl">
-                <div className="text-center">
-                    {isApproved ? (
-                        <CheckCircle className="w-20 h-20 text-green-500 mx-auto mb-6" />
-                    ) : (
-                        <Clock className="w-20 h-20 text-yellow-500 mx-auto mb-6" />
-                    )}
-
-                    <h1 className="text-3xl font-bold mb-4">
-                        {isApproved ? 'Pagamento Confirmado!' : 'Pedido Realizado!'}
-                    </h1>
-                    <p className="text-gray-600 mb-2">Número do pedido: <strong>#{order.order_number}</strong></p>
-                    <p className="text-gray-600 mb-8">
-                        Obrigado pela sua compra, {order.customer_name}!
-                    </p>
-
-                    <div className="bg-gray-50 rounded-lg p-6 mb-8">
-                        <h2 className="font-bold text-lg mb-4">Resumo do Pedido</h2>
-                        <div className="space-y-2 text-left">
-                            {order.items.map((item: any, idx: number) => (
-                                <div key={idx} className="flex justify-between">
-                                    <span>{item.quantity}x {item.title}</span>
-                                    <span className="font-bold">R$ {(item.unit_price * item.quantity).toFixed(2)}</span>
-                                </div>
-                            ))}
-                            <div className="border-t pt-2 flex justify-between font-bold text-lg">
-                                <span>Total:</span>
-                                <span>R$ {order.total.toFixed(2)}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Show Auto-Redirect info ONLY if approved */}
-                    {isApproved && (
-                        <div className="bg-green-50 border-2 border-green-500 rounded-lg p-6 mb-6">
-                            <p className="font-bold text-green-700 mb-2">
-                                Redirecionando para WhatsApp em {countdown} segundos...
-                            </p>
-                            <p className="text-sm text-gray-600">
-                                Você será direcionado para confirmar os detalhes da entrega.
-                            </p>
-                        </div>
-                    )}
-
-                    {!isApproved && (
-                        <div className="bg-yellow-50 border-2 border-yellow-500 rounded-lg p-6 mb-6">
-                            <h3 className="font-bold text-yellow-800 text-lg mb-2">
-                                Aguardando Pagamento
-                            </h3>
-                            <p className="text-sm text-gray-700 mb-4">
-                                Seu pedido foi gerado. Realize o pagamento para confirmar.
-                            </p>
-
-                            {/* PIX Payment Info */}
-                            {order.qr_code_base64 && (
-                                <div className="bg-white p-4 rounded shadow-sm mb-4">
-                                    <p className="text-sm font-bold mb-2 text-gray-800">Escaneie o QR Code PIX:</p>
-                                    <img
-                                        src={`data:image/png;base64,${order.qr_code_base64}`}
-                                        alt="QR Code PIX"
-                                        className="w-48 h-48 mx-auto mb-4 border"
-                                    />
-                                    <div className="relative">
-                                        <textarea
-                                            readOnly
-                                            className="w-full text-xs p-2 bg-gray-100 border rounded h-20 resize-none font-mono"
-                                            value={order.qr_code}
-                                        />
-                                        <button
-                                            onClick={copyPix}
-                                            className="mt-2 flex items-center justify-center gap-2 w-full bg-[#DD3468] text-white py-2 rounded font-bold hover:bg-[#c42d5c]"
-                                        >
-                                            <Copy size={16} />
-                                            {copied ? 'Copiado!' : 'Copiar Código PIX'}
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Ticket / Link Payment Info */}
-                            {order.ticket_url && !order.qr_code_base64 && (
-                                <div className="mt-4">
-                                    <a
-                                        href={order.ticket_url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="flex items-center justify-center gap-2 bg-blue-600 text-white w-full py-3 rounded font-bold hover:bg-blue-700"
-                                    >
-                                        <ExternalLink size={20} />
-                                        Abrir Boleto / Link de Pagamento
-                                    </a>
-                                </div>
-                            )}
-
-                            {/* Fallback if no specific payment info but pending status */}
-                            {!order.ticket_url && !order.qr_code_base64 && (
-                                <p className="text-sm text-red-500 mt-2">
-                                    Se você já realizou o pagamento, aguarde a confirmação.
-                                </p>
-                            )}
-                        </div>
-                    )}
-
-                    {isApproved && (
-                        <button
-                            onClick={redirectToWhatsApp}
-                            className="bg-green-500 text-white px-8 py-4 rounded-lg font-bold hover:bg-green-600 transition-colors"
-                        >
-                            Ir para WhatsApp Agora
-                        </button>
-                    )}
-
-                    <div className="mt-6">
-                        <button
-                            onClick={() => router.push('/')}
-                            className="text-[#DD3468] hover:underline"
-                        >
-                            Voltar para a loja
-                        </button>
-                    </div>
+            <Suspense fallback={
+                <div className="pt-32 pb-12 container mx-auto px-6 text-center">
+                    <p>Carregando informações do pedido...</p>
                 </div>
-            </div>
-
+            }>
+                <SuccessContent />
+            </Suspense>
             <Footer />
         </main>
     );
