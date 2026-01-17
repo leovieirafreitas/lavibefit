@@ -264,23 +264,25 @@ export default function ProductPage() {
                         )}
 
                         {/* Price */}
-                        <div className="mb-6">
-                            <p className="text-xs text-gray-500 uppercase mb-1">Preço Individual</p>
-                            <div className="flex items-baseline gap-3">
-                                {hasDiscount && (
-                                    <span className="text-gray-400 text-lg line-through">R$ {originalPrice.toFixed(2)}</span>
+                        {!isComingSoon && (
+                            <div className="mb-6">
+                                <p className="text-xs text-gray-500 uppercase mb-1">Preço Individual</p>
+                                <div className="flex items-baseline gap-3">
+                                    {hasDiscount && (
+                                        <span className="text-gray-400 text-lg line-through">R$ {originalPrice.toFixed(2)}</span>
+                                    )}
+                                    <span className="text-4xl font-bold text-gray-900">R$ {finalPrice.toFixed(2)}</span>
+                                </div>
+                                {product.installments && (
+                                    <p className="text-sm text-gray-600 mt-2">{product.installments}</p>
                                 )}
-                                <span className="text-4xl font-bold text-gray-900">R$ {finalPrice.toFixed(2)}</span>
+                                {hasPix && pixPrice && (
+                                    <p className="text-green-600 font-bold mt-2">
+                                        R$ {pixPrice.toFixed(2)} no PIX ({product.pix_discount}% OFF)
+                                    </p>
+                                )}
                             </div>
-                            {product.installments && (
-                                <p className="text-sm text-gray-600 mt-2">{product.installments}</p>
-                            )}
-                            {hasPix && pixPrice && (
-                                <p className="text-green-600 font-bold mt-2">
-                                    R$ {pixPrice.toFixed(2)} no PIX ({product.pix_discount}% OFF)
-                                </p>
-                            )}
-                        </div>
+                        )}
 
                         {/* Color Selector */}
                         {[...new Set(variants.map(v => v.color).filter(Boolean))].length > 0 && (
@@ -332,7 +334,7 @@ export default function ProductPage() {
                                                     }`}>
                                                     {variant.stock === 0 ? 'Esgotado' : `${variant.stock} un.`}
                                                 </span>
-                                                {variant.price && variant.price !== product.price && (
+                                                {variant.price && variant.price !== product.price && !isComingSoon && (
                                                     <span className="text-[10px] text-center text-green-600 font-bold">
                                                         R$ {variant.price}
                                                     </span>
@@ -409,8 +411,8 @@ export default function ProductPage() {
                                 }
                             }}
                             className={`w-full border-2 font-bold py-3 rounded-lg uppercase tracking-wide transition-colors flex items-center justify-center gap-2 ${isFavorite(product.id)
-                                    ? 'border-[#DD3468] text-[#DD3468] bg-pink-50'
-                                    : 'border-gray-300 text-gray-700 hover:border-[#DD3468] hover:text-[#DD3468]'
+                                ? 'border-[#DD3468] text-[#DD3468] bg-pink-50'
+                                : 'border-gray-300 text-gray-700 hover:border-[#DD3468] hover:text-[#DD3468]'
                                 }`}
                         >
                             <Heart className={`w-5 h-5 ${isFavorite(product.id) ? 'fill-current' : ''}`} />

@@ -87,27 +87,31 @@ export default function ProductCard({ product }: { product: Product }) {
                 <h3 className="text-gray-900 font-bold text-sm uppercase tracking-wide mb-1 group-hover:text-[#DD3468] transition-colors">
                     {product.name}
                 </h3>
-                <div className="flex justify-center gap-2 items-center">
-                    {hasDiscount && (
-                        <span className="text-gray-400 text-xs line-through">R$ {originalPrice.toFixed(2)}</span>
-                    )}
-                    <span className="text-black font-bold text-base">
-                        R$ {finalPrice.toFixed(2)}
-                    </span>
-                </div>
+                {!isComingSoon && (
+                    <>
+                        <div className="flex justify-center gap-2 items-center">
+                            {hasDiscount && (
+                                <span className="text-gray-400 text-xs line-through">R$ {originalPrice.toFixed(2)}</span>
+                            )}
+                            <span className="text-black font-bold text-base">
+                                R$ {finalPrice.toFixed(2)}
+                            </span>
+                        </div>
 
-                {/* Installments */}
-                {product.installments && (
-                    <p className="text-gray-500 text-[10px] mt-1 uppercase tracking-wider">
-                        {product.installments}
-                    </p>
-                )}
+                        {/* Installments */}
+                        {product.installments && (
+                            <p className="text-gray-500 text-[10px] mt-1 uppercase tracking-wider">
+                                {product.installments}
+                            </p>
+                        )}
 
-                {/* PIX Discount */}
-                {hasPix && pixPrice && (
-                    <p className="text-green-600 text-[10px] mt-1 font-bold uppercase tracking-wider">
-                        R$ {pixPrice.toFixed(2)} no PIX ({product.pix_discount}% OFF)
-                    </p>
+                        {/* PIX Discount */}
+                        {hasPix && pixPrice && (
+                            <p className="text-green-600 text-[10px] mt-1 font-bold uppercase tracking-wider">
+                                R$ {pixPrice.toFixed(2)} no PIX ({product.pix_discount}% OFF)
+                            </p>
+                        )}
+                    </>
                 )}
             </div>
         </Link>
