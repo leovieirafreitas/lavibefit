@@ -313,10 +313,10 @@ export default function AdminDashboard() {
 
         // Explicit payload to avoid sending system columns like 'created_at'
         const payload = {
-            title: editingSlide.title,
-            subtitle: editingSlide.subtitle,
+            title: editingSlide.title || '',
+            subtitle: editingSlide.subtitle || '',
             image_url: editingSlide.image_url,
-            mobile_image_url: editingSlide.mobile_image_url, // Added mobile image
+            // mobile_image_url: editingSlide.mobile_image_url, // TODO: Uncomment after DB migration
             link: editingSlide.link_url, // Adjusted to match DB column 'link'
             button_text: editingSlide.button_text || 'Ver Agora',
             active: editingSlide.active !== undefined ? editingSlide.active : true,
