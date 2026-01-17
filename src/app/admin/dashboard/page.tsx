@@ -881,7 +881,7 @@ export default function AdminDashboard() {
                                             <GripVertical className="text-gray-400" size={20} />
                                             <div className="w-12 h-12 bg-gray-100 rounded overflow-hidden relative flex-shrink-0">
                                                 {product.image_url && (
-                                                    <Image src={product.image_url} alt={product.name} fill className="object-cover" />
+                                                    <Image src={product.image_url} alt={product.name} fill className="object-cover" sizes="64px" loading="lazy" />
                                                 )}
                                             </div>
                                             <div className="flex-1">
@@ -927,7 +927,7 @@ export default function AdminDashboard() {
                                                         {product ? (
                                                             <>
                                                                 <div className="w-8 h-8 relative rounded overflow-hidden flex-shrink-0">
-                                                                    {product.image_url && <Image src={product.image_url} alt="" fill className="object-cover" />}
+                                                                    {product.image_url && <Image src={product.image_url} alt="" fill className="object-cover" sizes="48px" loading="lazy" />}
                                                                 </div>
                                                                 <span className="font-bold text-xs truncate max-w-[150px]" title={product.name}>{product.name}</span>
                                                             </>
@@ -982,7 +982,7 @@ export default function AdminDashboard() {
                             {heroSlides.map(slide => (
                                 <div key={slide.id} className="bg-white p-4 rounded border flex gap-4 items-center">
                                     <div className="w-48 h-24 relative bg-gray-100 rounded overflow-hidden flex-shrink-0">
-                                        {slide.image_url && <Image src={slide.image_url} alt="Slide" fill className="object-cover" sizes="192px" />}
+                                        {slide.image_url && <Image src={slide.image_url} alt="Slide" fill className="object-cover" sizes="192px" loading="lazy" />}
                                     </div>
                                     <div className="flex-1">
                                         <h3 className="font-bold text-lg">{slide.title || 'Sem Título'}</h3>
@@ -1180,7 +1180,7 @@ export default function AdminDashboard() {
                                     <label className="block text-sm font-bold">Imagem Principal</label>
                                     <div className="aspect-square bg-gray-100 rounded border-2 border-dashed border-gray-300 flex items-center justify-center relative hover:bg-gray-50 transition-colors cursor-pointer overflow-hidden group">
                                         {editingProduct.image_url ?
-                                            <Image src={editingProduct.image_url} alt="Preview" fill className="object-cover" /> :
+                                            <Image src={editingProduct.image_url} alt="Preview" fill className="object-cover" sizes="(max-width: 768px) 100vw, 33vw" /> :
                                             <div className="text-center p-4"><ImageIcon className="mx-auto mb-2 text-gray-300" /><span className="text-xs text-gray-400">Clique para upload</span></div>
                                         }
                                         <input type="file" onChange={async e => { const url = await handleFileUpload(e, 'products'); if (url) setEditingProduct({ ...editingProduct, image_url: url }) }} className="absolute inset-0 opacity-0 cursor-pointer" />
@@ -1432,7 +1432,7 @@ export default function AdminDashboard() {
                                 </label>
                                 <div className="aspect-[2/1] bg-gray-100 rounded border-2 border-dashed border-gray-300 flex items-center justify-center relative overflow-hidden hover:border-black transition-colors">
                                     {editingSlide.image_url ?
-                                        <Image src={editingSlide.image_url} alt="preview" fill className="object-cover" /> :
+                                        <Image src={editingSlide.image_url} alt="preview" fill className="object-cover" sizes="(max-width: 768px) 100vw, 600px" /> :
                                         <div className="text-center">
                                             <ImageIcon className="mx-auto text-gray-300 mb-1" />
                                             <span className="text-xs text-gray-400">Upload Desktop</span>
@@ -1449,7 +1449,7 @@ export default function AdminDashboard() {
                                 </label>
                                 <div className="aspect-square w-1/2 bg-gray-100 rounded border-2 border-dashed border-gray-300 flex items-center justify-center relative overflow-hidden hover:border-black transition-colors">
                                     {editingSlide.mobile_image_url ?
-                                        <Image src={editingSlide.mobile_image_url} alt="preview mobile" fill className="object-cover" /> :
+                                        <Image src={editingSlide.mobile_image_url} alt="preview mobile" fill className="object-cover" sizes="(max-width: 768px) 100vw, 300px" /> :
                                         <div className="text-center">
                                             <ImageIcon className="mx-auto text-gray-300 mb-1" />
                                             <span className="text-xs text-gray-400">Upload Mobile</span>

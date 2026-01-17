@@ -70,8 +70,8 @@ export default function Hero() {
                                     src={slide.image_url}
                                     alt={slide.title || 'Banner'}
                                     fill
-                                    priority={current === 0}
-                                    quality={90}
+                                    priority={true} // Always priority as it is the active slide
+                                    quality={80}
                                     sizes="100vw"
                                     className="object-cover object-center"
                                 />
@@ -83,8 +83,8 @@ export default function Hero() {
                                     src={slide.mobile_image_url || slide.image_url}
                                     alt={slide.title || 'Banner Mobile'}
                                     fill
-                                    priority={current === 0}
-                                    quality={90}
+                                    priority={true}
+                                    quality={80}
                                     sizes="100vw"
                                     className="object-cover object-center"
                                 />
