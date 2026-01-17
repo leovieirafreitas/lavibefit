@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { runSeoAudit, SeoScore } from '@/services/seoAuditor'; // Import Auditor
 import {
     LayoutDashboard,
     Package,
@@ -138,6 +139,11 @@ export default function AdminDashboard() {
         state: 'AM',
         phone: ''
     });
+
+    // Auditor State
+    const [auditResults, setAuditResults] = useState<{ productId: number, score: SeoScore }[]>([]);
+    const [pageSpeedScore, setPageSpeedScore] = useState<{ mobile: number | null, desktop: number | null }>({ mobile: null, desktop: null });
+    const [analyzingSpeed, setAnalyzingSpeed] = useState(false);
 
     // UI States
     const [loading, setLoading] = useState(true);
@@ -451,6 +457,57 @@ export default function AdminDashboard() {
         }
     };
 
+    const runFullAudit = () => {
+        const results = products.map(p => ({
+            productId: p.id,
+            score: runSeoAudit(p, settings.keywords?.split(',')[0] || '') // Use first keyword as proxy focus
+        }));
+        setAuditResults(results.sort((a, b) => a.score.score - b.score.score)); // Sort by lowest score
+        alert(`Auditoria Completa! ${results.length} produtos analisados.`);
+    };
+
+    const runPageSpeedTest = async () => {
+        // Permitir que o usuário defina a URL ou usar a salva
+        const urlToTest = prompt('Qual URL deseja testar?', 'https://site-lavibefit.vercel.app');
+        if (!urlToTest) return;
+
+        if (urlToTest.includes('localhost')) {
+            alert('PageSpeed do Google não consegue acessar localhost. Use a URL pública (Vercel/Render).');
+            return;
+        }
+
+        setAnalyzingSpeed(true);
+        setPageSpeedScore({ mobile: null, desktop: null }); // Reset anterior
+
+        try {
+            // Mobile Strategy
+            const resMobile = await fetch(`https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(urlToTest)}&strategy=mobile`);
+            const jsonMobile = await resMobile.json();
+
+            if (jsonMobile.error) {
+                throw new Error(`Erro Mobile: ${jsonMobile.error.message}`);
+            }
+
+            const scoreMobile = jsonMobile.lighthouseResult?.categories?.performance?.score * 100;
+
+            // Desktop Strategy
+            const resDesktop = await fetch(`https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(urlToTest)}&strategy=desktop`);
+            const jsonDesktop = await resDesktop.json();
+
+            if (jsonDesktop.error) {
+                throw new Error(`Erro Desktop: ${jsonDesktop.error.message}`);
+            }
+
+            const scoreDesktop = jsonDesktop.lighthouseResult?.categories?.performance?.score * 100;
+
+            setPageSpeedScore({ mobile: Math.round(scoreMobile), desktop: Math.round(scoreDesktop) });
+        } catch (e: any) {
+            console.error(e);
+            alert(`Erro ao consultar Google PageSpeed: ${e.message}`);
+        } finally {
+            setAnalyzingSpeed(false);
+        }
+    };
 
     const sendWhatsApp = (order: Order) => {
         if (!order.customer_phone) {
@@ -1295,6 +1352,70 @@ export default function AdminDashboard() {
                                         <p className="text-xs text-gray-400 mt-1">Usado para indexação de contato.</p>
                                     </div>
                                 </div>
+                            </section>
+
+                            {/* AUDITORIA & PERFORMANCE SECTION */}
+                            <section className="space-y-4 pt-4 border-t">
+                                <div className="flex justify-between items-center">
+                                    <h3 className="font-bold text-lg flex items-center gap-2">📊 Auditoria & Performance</h3>
+                                    <div className="flex gap-2">
+                                        <button onClick={runFullAudit} className="bg-blue-600 text-white px-4 py-2 rounded text-sm font-bold hover:bg-blue-700">
+                                            RODAR AUDITORIA DE PRODUTOS
+                                        </button>
+                                        <button onClick={runPageSpeedTest} disabled={analyzingSpeed} className="bg-purple-600 text-white px-4 py-2 rounded text-sm font-bold hover:bg-purple-700 disabled:opacity-50">
+                                            {analyzingSpeed ? 'TESTANDO...' : 'TESTAR VELOCIDADE (GOOGLE)'}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* PageSpeed Results */}
+                                {(pageSpeedScore.mobile !== null) && (
+                                    <div className="grid grid-cols-2 gap-4 p-4 bg-gray-900 rounded text-white mb-4">
+                                        <div className="text-center">
+                                            <p className="text-sm text-gray-400">Mobile Score</p>
+                                            <div className={`text-4xl font-bold ${pageSpeedScore.mobile >= 90 ? 'text-green-400' : pageSpeedScore.mobile >= 50 ? 'text-yellow-400' : 'text-red-400'}`}>
+                                                {pageSpeedScore.mobile}
+                                            </div>
+                                        </div>
+                                        <div className="text-center border-l border-gray-700">
+                                            <p className="text-sm text-gray-400">Desktop Score</p>
+                                            <div className={`text-4xl font-bold ${pageSpeedScore.desktop! >= 90 ? 'text-green-400' : pageSpeedScore.desktop! >= 50 ? 'text-yellow-400' : 'text-red-400'}`}>
+                                                {pageSpeedScore.desktop}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Audit Results List */}
+                                {auditResults.length > 0 && (
+                                    <div className="space-y-2">
+                                        <p className="font-bold text-gray-700">Resultados da Auditoria ({auditResults.length} produtos)</p>
+                                        <div className="border rounded max-h-96 overflow-y-auto">
+                                            {auditResults.map(res => {
+                                                const product = products.find(p => p.id === res.productId);
+                                                if (!product) return null;
+                                                return (
+                                                    <div key={res.productId} className="flex justify-between items-start p-3 border-b hover:bg-gray-50">
+                                                        <div>
+                                                            <span className="font-bold text-sm block">{product.name}</span>
+                                                            <div className="flex gap-2 mt-1">
+                                                                {res.score.issues.map((issue, idx) => (
+                                                                    <span key={idx} className={`text-[10px] px-2 py-1 rounded ${issue.severity === 'critical' ? 'bg-red-100 text-red-600' : 'bg-yellow-100 text-yellow-600'}`}>
+                                                                        {issue.message}
+                                                                    </span>
+                                                                ))}
+                                                                {res.score.issues.length === 0 && <span className="text-[10px] bg-green-100 text-green-600 px-2 py-1 rounded">SEO Perfeito!</span>}
+                                                            </div>
+                                                        </div>
+                                                        <div className={`font-bold text-xl ${res.score.score >= 90 ? 'text-green-500' : res.score.score >= 50 ? 'text-yellow-500' : 'text-red-500'}`}>
+                                                            {res.score.score}
+                                                        </div>
+                                                    </div>
+                                                )
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
                             </section>
                         </div>
                     </div>
