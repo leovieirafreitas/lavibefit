@@ -6,29 +6,27 @@ import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import Image from "next/image";
 
-async function getHomeContent() {
-  const { data } = await supabase.from('home_content').select('*');
-  return data || [];
-}
+async function getHomeData() {
+  // Fetch all data in parallel for better performance
+  const [homeContent, settings, products] = await Promise.all([
+    supabase.from('home_content').select('*'),
+    supabase.from('global_settings').select('value').eq('key', 'top_bar_text').single(),
+    supabase
+      .from('products')
+      .select('*, variants:product_variants(stock)')
+      .order('display_order', { ascending: true })
+      .limit(4)
+  ]);
 
-async function getGlobalSettings() {
-  const { data } = await supabase.from('global_settings').select('value').eq('key', 'top_bar_text').single();
-  return data?.value;
-}
-
-async function getInitialProducts() {
-  const { data } = await supabase
-    .from('products')
-    .select('*, variants:product_variants(stock)')
-    .order('display_order', { ascending: true })
-    .limit(4);
-  return data || [];
+  return {
+    homeContent: homeContent.data || [],
+    topBarText: settings.data?.value,
+    initialProducts: products.data || []
+  };
 }
 
 export default async function Home() {
-  const allContent = await getHomeContent();
-  const topBarText = await getGlobalSettings();
-  const initialProducts = await getInitialProducts();
+  const { homeContent: allContent, topBarText, initialProducts } = await getHomeData();
 
   // Find specific blocks by ID or fallback to defaults
   const promoBlock = allContent.find(c => c.id === 1) || {
@@ -65,8 +63,10 @@ export default async function Home() {
                   width={1920}
                   height={600}
                   className="w-full h-auto"
-                  quality={90}
-                  priority
+                  quality={70}
+                  loading="lazy"
+                  placeholder="blur"
+                  blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAb/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWEREiMxUf/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
                 />
               ) : (
                 <div className="w-full h-[600px] bg-blue-600 flex items-center justify-center text-white font-bold text-2xl">BANNER LANÇAMENTOS (Sem Imagem)</div>
@@ -81,7 +81,10 @@ export default async function Home() {
                   alt="Lançamentos"
                   fill
                   className="object-cover"
-                  quality={90}
+                  quality={70}
+                  loading="lazy"
+                  placeholder="blur"
+                  blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAb/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWEREiMxUf/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
                 />
               ) : (
                 <div className="w-full h-full bg-blue-600 flex items-center justify-center text-white font-bold">BANNER MOBILE</div>
@@ -99,7 +102,18 @@ export default async function Home() {
             <div className="bg-black text-white flex flex-col md:flex-row items-center overflow-hidden shadow-2xl">
               {/* Image Side */}
               <div className="w-full md:w-1/2 h-96 relative bg-gray-900">
-                {promoBlock.image_url && <Image src={promoBlock.image_url} alt={promoBlock.title || 'Promo'} fill className="object-cover" />}
+                {promoBlock.image_url && (
+                  <Image
+                    src={promoBlock.image_url}
+                    alt={promoBlock.title || 'Promo'}
+                    fill
+                    className="object-cover"
+                    quality={70}
+                    loading="lazy"
+                    placeholder="blur"
+                    blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAb/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWEREiMxUf/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
+                  />
+                )}
               </div>
 
               {/* Text Side */}

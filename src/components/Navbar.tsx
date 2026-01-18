@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { ShoppingBag, Search, User, Heart, Menu, X } from 'lucide-react';
+import { ShoppingBag, Search, User, Heart, Menu, X, Package } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useCart } from '@/contexts/CartContext';
@@ -152,6 +152,14 @@ export default function Navbar({ initialTopBarText }: { initialTopBarText?: stri
 
                             {/* Icons - Right */}
                             <div className="flex items-center gap-3 md:gap-4">
+                                <Link
+                                    href="/meus-pedidos"
+                                    className="text-gray-700 hover:text-[#DD3468] transition-colors flex flex-col items-center gap-0.5"
+                                    title="Acompanhar Meu Pedido"
+                                >
+                                    <Package className="w-5 h-5" />
+                                </Link>
+
                                 <button
                                     onClick={() => setIsSearchOpen(true)}
                                     className="text-gray-700 hover:text-[#DD3468] transition-colors"
@@ -219,6 +227,9 @@ export default function Navbar({ initialTopBarText }: { initialTopBarText?: stri
                     </Link>
 
                     <div className="pt-4 flex flex-col gap-4 border-t border-gray-200 mt-4">
+                        <Link href="/meus-pedidos" className="text-sm font-semibold text-gray-600 flex items-center gap-3" onClick={() => setIsMobileMenuOpen(false)}>
+                            <Package className="w-5 h-5" /> Acompanhar Meus Pedidos
+                        </Link>
                         <Link href="/favoritos" className="text-sm font-semibold text-gray-600 flex items-center gap-3" onClick={() => setIsMobileMenuOpen(false)}>
                             <Heart className="w-5 h-5" /> Meus Favoritos ({getTotalFavorites()})
                         </Link>

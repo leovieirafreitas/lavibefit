@@ -24,7 +24,9 @@ import {
     Save,
     MessageCircle,
     GripVertical,
-    Globe // Added Globe icon
+    Globe, // Added Globe icon
+    MessageSquare, // Added MessageSquare icon
+    RotateCcw // Added RotateCcw icon
 } from 'lucide-react';
 
 // --- Types ---
@@ -157,6 +159,8 @@ export default function AdminDashboard() {
     const [isSlideModalOpen, setIsSlideModalOpen] = useState(false);
     const [topBarText, setTopBarText] = useState('');
     const [topBarActive, setTopBarActive] = useState(true);
+    const [whatsappPendingMessage, setWhatsappPendingMessage] = useState('');
+    const [whatsappClientMessage, setWhatsappClientMessage] = useState('');
 
     // Stats
     const [stats, setStats] = useState({
@@ -451,6 +455,62 @@ export default function AdminDashboard() {
             .eq('key', 'top_bar_active')
             .single();
         if (activeData) setTopBarActive(activeData.value === 'true');
+
+        const { data: pendingMsg } = await supabase
+            .from('global_settings')
+            .select('value')
+            .eq('key', 'whatsapp_pending_message')
+            .single();
+
+        if (pendingMsg && pendingMsg.value && !pendingMsg.value.includes('\uFFFD')) {
+            setWhatsappPendingMessage(pendingMsg.value);
+        } else {
+            // Default Professional Message with No Emojis to prevent encoding issues
+            setWhatsappPendingMessage(`Olá, {customer_name}!\n\nVimos que seu pedido *#{order_number}* na La Vibe Fit está pendente.\nPara finalizar sua compra e garantir seus produtos, acesse o link abaixo:\n\n{payment_link}\n\nQualquer dúvida, estamos à disposição!`);
+        }
+
+        const { data: clientMsg } = await supabase
+            .from('global_settings')
+            .select('value')
+            .eq('key', 'whatsapp_client_message')
+            .single();
+
+        if (clientMsg && clientMsg.value && !clientMsg.value.includes('\uFFFD')) {
+            setWhatsappClientMessage(clientMsg.value);
+        } else {
+            // Default Client Message with Unicode Escapes
+            // \uD83C\uDF89 = 🎉, \uD83D\uDCE6 = 📦, \uD83D\uDCB0 = 💰, \u2705 = ✅, \uD83D\uDCCD = 📍
+            // Default Client Message without Emojis
+            setWhatsappClientMessage(`*PEDIDO CONFIRMADO!*\n\n*Pedido:* #{order_number}\n\n*ITENS DO PEDIDO:*\n(Lista de itens será inserida aqui)\n\n*Total:* (Valor total)\n*Pagamento:* Aprovado\n\n*Entrega:*\n(Endereço será inserido aqui)`);
+        }
+    };
+
+    const resetMessages = () => {
+        if (!confirm('Deseja restaurar as mensagens para o padrão original (Versão Limpa)?')) return;
+
+        // Clean Version - No Emojis to avoid encoding errors
+        setWhatsappPendingMessage(`Olá, {customer_name}!\n\nVimos que seu pedido *#{order_number}* na La Vibe Fit está pendente.\nPara finalizar sua compra e garantir seus produtos, acesse o link abaixo:\n\n{payment_link}\n\nQualquer dúvida, estamos à disposição!`);
+
+        // Clean Version - No Emojis
+        setWhatsappClientMessage(`*PEDIDO CONFIRMADO!*\n\n*Pedido:* #{order_number}\n\n*ITENS DO PEDIDO:*\n(Lista de itens será inserida aqui)\n\n*Total:* (Valor total)\n*Pagamento:* Aprovado\n\n*Entrega:*\n(Endereço será inserido aqui)`);
+
+        alert('Mensagens restauradas para versão limpa! Clique em SALVAR ALTERAÇÕES para gravar no banco.');
+    };
+
+    const saveMessages = async () => {
+        const { error: errorPending } = await supabase
+            .from('global_settings')
+            .upsert({ key: 'whatsapp_pending_message', value: whatsappPendingMessage });
+
+        const { error: errorClient } = await supabase
+            .from('global_settings')
+            .upsert({ key: 'whatsapp_client_message', value: whatsappClientMessage });
+
+        if (errorPending || errorClient) {
+            alert('Erro ao salvar mensagens.');
+        } else {
+            alert('Mensagens salvas com sucesso!');
+        }
     };
 
     const fetchSettings = async () => {
@@ -542,11 +602,13 @@ export default function AdminDashboard() {
         const phone = order.customer_phone.replace(/\D/g, '');
         const paymentLink = `${window.location.origin}/checkout/success?order=${order.order_number}`;
 
-        let message = `Olá, ${order.customer_name}! 👋\n\n`;
-        message += `Vimos que seu pedido *#${order.order_number}* na La Vibe Fit está pendente.\n`;
-        message += `Para finalizar sua compra e garantir seus produtos, acesse o link abaixo:\n\n`;
-        message += `${paymentLink}\n\n`;
-        message += `Qualquer dúvida, estamos à disposição parça!`;
+        // Uses the state message (which has default if DB is empty)
+        // Clean any potential replacement characters (\uFFFD) before sending
+        const message = whatsappPendingMessage
+            .replace(/\uFFFD/g, '') // Remove corrupted chars
+            .replace(/{customer_name}/g, order.customer_name)
+            .replace(/{order_number}/g, order.order_number)
+            .replace(/{payment_link}/g, paymentLink);
 
         const url = `https://wa.me/55${phone}?text=${encodeURIComponent(message)}`;
         window.open(url, '_blank');
@@ -567,7 +629,24 @@ export default function AdminDashboard() {
         } else {
             alert('Todos os pedidos pendentes foram excluídos com sucesso!');
             fetchOrders();
-            // Update stats too if needed, but let's re-fetch all
+        }
+    };
+
+    const clearCancelledOrders = async () => {
+        if (!confirm('⚠️ ATENÇÃO: Tem certeza que deseja EXCLUIR TODOS os pedidos CANCELADOS?\n\nEssa ação apagará permanentemente todos os pedidos cancelados e não poderá ser desfeita.')) {
+            return;
+        }
+
+        const { error } = await supabase
+            .from('orders')
+            .delete()
+            .eq('payment_status', 'cancelled');
+
+        if (error) {
+            alert('Erro ao excluir pedidos: ' + error.message);
+        } else {
+            alert('Todos os pedidos cancelados foram excluídos com sucesso!');
+            fetchOrders();
         }
     };
 
@@ -598,6 +677,7 @@ export default function AdminDashboard() {
                         { id: 'products', icon: Package, label: 'Produtos' },
                         { id: 'order-products', icon: GripVertical, label: 'Ordenar Produtos' },
                         { id: 'reviews', icon: MessageCircle, label: 'Avaliações' },
+                        { id: 'messages', icon: MessageSquare, label: 'Configurar Mensagens' },
                         { id: 'slides', icon: Images, label: 'Banner / Slides' },
                         { id: 'offers', icon: LayoutTemplate, label: 'Conteúdo Home' },
                         { id: 'seo', icon: Globe, label: 'SEO & Google' },
@@ -705,10 +785,13 @@ export default function AdminDashboard() {
                                                 <td className="px-6 py-3">
                                                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${order.payment_status === 'approved' ? 'bg-green-100 text-green-700' :
                                                         order.payment_status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                                                            'bg-gray-100 text-gray-700'
+                                                            order.payment_status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                                                                'bg-gray-100 text-gray-700'
                                                         }`}>
                                                         {order.payment_status === 'approved' ? 'Pago' :
-                                                            order.payment_status === 'pending' ? 'Pendente' : order.payment_status}
+                                                            order.payment_status === 'pending' ? 'Pendente' :
+                                                                order.payment_status === 'cancelled' ? 'Cancelado' :
+                                                                    order.payment_status}
                                                     </span>
                                                     {order.payment_status === 'pending' && (
                                                         <button
@@ -798,10 +881,17 @@ export default function AdminDashboard() {
                             <div className="flex gap-2">
                                 <button
                                     onClick={clearPendingOrders}
-                                    className="bg-red-500 text-white px-4 py-2 rounded text-xs font-bold hover:bg-red-600 flex items-center gap-2 transition-colors"
+                                    className="bg-yellow-500 text-white px-4 py-2 rounded text-xs font-bold hover:bg-yellow-600 flex items-center gap-2 transition-colors"
                                     title="Excluir todos os pedidos com status Pendente"
                                 >
                                     <Trash2 size={14} /> LIMPAR PENDENTES
+                                </button>
+                                <button
+                                    onClick={clearCancelledOrders}
+                                    className="bg-red-500 text-white px-4 py-2 rounded text-xs font-bold hover:bg-red-600 flex items-center gap-2 transition-colors"
+                                    title="Excluir todos os pedidos com status Cancelado"
+                                >
+                                    <Trash2 size={14} /> LIMPAR CANCELADOS
                                 </button>
                                 <button onClick={fetchOrders} className="text-sm text-blue-600 hover:underline px-2">Atualizar</button>
                             </div>
@@ -815,7 +905,7 @@ export default function AdminDashboard() {
                                         <th className="px-6 py-3">Total</th>
                                         <th className="px-6 py-3">Status</th>
                                         <th className="px-6 py-3">Itens</th>
-                                        <th className="px-6 py-3">Ações</th>
+                                        <th className="px-6 py-3 min-w-[140px]">Ações</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
@@ -835,17 +925,19 @@ export default function AdminDashboard() {
                                             <td className="px-6 py-4">
                                                 <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${order.payment_status === 'approved' ? 'bg-green-100 text-green-700' :
                                                     order.payment_status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                                                        'bg-gray-100 text-gray-700'
+                                                        order.payment_status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                                                            'bg-gray-100 text-gray-700'
                                                     }`}>
                                                     {order.payment_status === 'approved' ? 'Aprovado' :
                                                         order.payment_status === 'pending' ? 'Pendente' :
-                                                            order.payment_status}
+                                                            order.payment_status === 'cancelled' ? 'Cancelado' :
+                                                                order.payment_status}
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 text-gray-500 text-xs max-w-xs truncate">
                                                 {order.items?.map((i: any) => `${i.quantity}x ${i.title}`).join(', ') || 'N/A'}
                                             </td>
-                                            <td className="px-6 py-4">
+                                            <td className="px-6 py-4 whitespace-nowrap">
                                                 {order.payment_status === 'pending' && (
                                                     <button
                                                         onClick={() => sendWhatsApp(order)}
@@ -859,7 +951,7 @@ export default function AdminDashboard() {
                                     ))}
                                     {orders.length === 0 && (
                                         <tr>
-                                            <td colSpan={5} className="px-6 py-8 text-center text-gray-500">Nenhum pedido encontrado.</td>
+                                            <td colSpan={6} className="px-6 py-8 text-center text-gray-500">Nenhum pedido encontrado.</td>
                                         </tr>
                                     )}
                                 </tbody>
@@ -1442,6 +1534,68 @@ export default function AdminDashboard() {
                                     </div>
                                 )}
                             </section>
+                        </div>
+                    </div>
+                )}
+
+                {/* --- MESSAGES --- */}
+                {activeTab === 'messages' && (
+                    <div className="space-y-6 animate-fadeIn">
+                        <div className="flex justify-between items-center">
+                            <h2 className="text-2xl font-bold">Configurar Mensagens</h2>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            {/* Admin Message (Pending Payment) */}
+                            <div className="bg-white p-6 rounded-lg shadow border border-gray-200">
+                                <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                                    <MessageSquare size={20} className="text-blue-600" />
+                                    Mensagem de Cobrança (Admin)
+                                </h3>
+                                <p className="text-xs text-gray-500 mb-4">
+                                    Essa é a mensagem que será preenchida quando você clicar em "Enviar Msg" nos pedidos pendentes.
+                                    <br />Use <strong>{'{customer_name}'}</strong> para o nome do cliente, <strong>{'{order_number}'}</strong> para o número do pedido e <strong>{'{payment_link}'}</strong> para o link de pagamento.
+                                </p>
+                                <textarea
+                                    className="w-full h-40 p-3 border rounded text-sm font-mono mb-4 resize-none focus:border-black focus:ring-1 focus:ring-black"
+                                    value={whatsappPendingMessage}
+                                    onChange={e => setWhatsappPendingMessage(e.target.value)}
+                                    placeholder="Olá {customer_name}, seu pedido #{order_number} está pendente..."
+                                />
+                            </div>
+
+                            {/* Client Message (Purchase Success) */}
+                            <div className="bg-white p-6 rounded-lg shadow border border-gray-200">
+                                <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                                    <MessageSquare size={20} className="text-green-600" />
+                                    Mensagem do Cliente (Pós-Compra)
+                                </h3>
+                                <p className="text-xs text-gray-500 mb-4">
+                                    Essa é a mensagem que o cliente enviará para VOCÊ ao finalizar uma compra e clicar no botão do WhatsApp.
+                                    <br />Use <strong>{'{order_number}'}</strong> para o número do pedido.
+                                </p>
+                                <textarea
+                                    className="w-full h-40 p-3 border rounded text-sm font-mono mb-4 resize-none focus:border-black focus:ring-1 focus:ring-black"
+                                    value={whatsappClientMessage}
+                                    onChange={e => setWhatsappClientMessage(e.target.value)}
+                                    placeholder="Olá, acabei de fazer o pedido #{order_number}..."
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex justify-end gap-3">
+                            <button
+                                onClick={resetMessages}
+                                className="bg-gray-100 text-gray-700 px-6 py-3 rounded font-bold hover:bg-gray-200 transition-colors flex items-center gap-2"
+                            >
+                                <RotateCcw size={18} /> RESTAURAR PADRÃO
+                            </button>
+                            <button
+                                onClick={saveMessages}
+                                className="bg-black text-white px-8 py-3 rounded font-bold hover:bg-gray-800 transition-colors flex items-center gap-2"
+                            >
+                                <Save size={18} /> SALVAR ALTERAÇÕES
+                            </button>
                         </div>
                     </div>
                 )}

@@ -9,6 +9,8 @@ import { ShoppingBag, Heart, Star, ChevronLeft, ChevronRight } from 'lucide-reac
 import Image from 'next/image';
 import { useCart } from '@/contexts/CartContext';
 import { useFavorites } from '@/contexts/FavoritesContext';
+import { useToast } from '@/contexts/ToastContext';
+import ProductPageSkeleton from '@/components/ProductPageSkeleton';
 
 export default function ProductPage() {
     const params = useParams();
@@ -27,8 +29,10 @@ export default function ProductPage() {
     const [reviewRating, setReviewRating] = useState(5);
     const [reviewComment, setReviewComment] = useState('');
     const [submittingReview, setSubmittingReview] = useState(false);
+    const [imagesPreloaded, setImagesPreloaded] = useState(false);
     const { addToCart } = useCart();
     const { addToFavorites, removeFromFavorites, isFavorite } = useFavorites();
+    const { showSuccess, showError, showWarning } = useToast();  // Inicializando hook aqui
 
     useEffect(() => {
         fetchData();
@@ -43,6 +47,32 @@ export default function ProductPage() {
         }
     }, [variants]);
 
+    // Preload all product images for instant switching
+    useEffect(() => {
+        if (!product) return;
+
+        const images = [];
+        if (product.image_url) images.push(product.image_url);
+        if (product.images && Array.isArray(product.images)) {
+            const galleryImages = product.images.filter((img: string) => img !== product.image_url);
+            images.push(...galleryImages);
+        }
+
+        // Preload all images
+        const preloadPromises = images.map((src) => {
+            return new Promise((resolve, reject) => {
+                const img = new window.Image();
+                img.src = src;
+                img.onload = resolve;
+                img.onerror = reject;
+            });
+        });
+
+        Promise.all(preloadPromises)
+            .then(() => setImagesPreloaded(true))
+            .catch(() => setImagesPreloaded(true)); // Continue even if some fail
+    }, [product]);
+
     // Clear size if color changes (optional, but safer)
     useEffect(() => {
         setSelectedSize('');
@@ -50,39 +80,38 @@ export default function ProductPage() {
 
     async function fetchData() {
         try {
-            // Fetch top bar text
-            const { data: settingsData } = await supabase
-                .from('global_settings')
-                .select('value')
-                .eq('key', 'top_bar_text')
-                .single();
-            if (settingsData) setTopBarText(settingsData.value);
+            // Fetch all data in parallel for better performance
+            const [settingsResult, productResult, variantsResult, reviewsResult] = await Promise.all([
+                supabase
+                    .from('global_settings')
+                    .select('value')
+                    .eq('key', 'top_bar_text')
+                    .single(),
+                supabase
+                    .from('products')
+                    .select('*')
+                    .eq('id', productId)
+                    .single(),
+                supabase
+                    .from('product_variants')
+                    .select('*')
+                    .eq('product_id', productId)
+                    .order('size'),
+                supabase
+                    .from('product_reviews')
+                    .select('*')
+                    .eq('product_id', productId)
+                    .order('created_at', { ascending: false })
+                    .limit(6) // Limit reviews for faster loading
+            ]);
 
-            // Fetch product
-            const { data: productData, error: productError } = await supabase
-                .from('products')
-                .select('*')
-                .eq('id', productId)
-                .single();
+            if (settingsResult.data) setTopBarText(settingsResult.data.value);
 
-            if (productError) throw productError;
-            setProduct(productData);
+            if (productResult.error) throw productResult.error;
+            setProduct(productResult.data);
 
-            // Fetch variants (sizes and stock)
-            const { data: variantsData } = await supabase
-                .from('product_variants')
-                .select('*')
-                .eq('product_id', productId)
-                .order('size');
-            setVariants(variantsData || []);
-
-            // Fetch reviews
-            const { data: reviewsData } = await supabase
-                .from('product_reviews')
-                .select('*')
-                .eq('product_id', productId)
-                .order('created_at', { ascending: false });
-            setReviews(reviewsData || []);
+            setVariants(variantsResult.data || []);
+            setReviews(reviewsResult.data || []);
 
         } catch (error) {
             console.error('Error fetching product:', error);
@@ -112,7 +141,7 @@ export default function ProductPage() {
 
             if (error) throw error;
 
-            alert('Avaliação enviada com sucesso!');
+            showSuccess('Avaliação enviada com sucesso!');
             setReviewName('');
             setReviewComment('');
             setReviewRating(5);
@@ -120,7 +149,7 @@ export default function ProductPage() {
             fetchData();
         } catch (error) {
             console.error('Error submitting review:', error);
-            alert('Erro ao enviar avaliação.');
+            showError('Erro ao enviar avaliação.');
         } finally {
             setSubmittingReview(false);
         }
@@ -130,9 +159,7 @@ export default function ProductPage() {
         return (
             <main className="min-h-screen bg-white">
                 <Navbar initialTopBarText={topBarText} />
-                <div className="pt-32 pb-12 container mx-auto px-6 text-center">
-                    <p className="text-gray-500">Carregando produto...</p>
-                </div>
+                <ProductPageSkeleton />
                 <Footer />
             </main>
         );
@@ -207,13 +234,16 @@ export default function ProductPage() {
                         {/* Main Image */}
                         <div className="relative aspect-[3/4] bg-gray-100 rounded-2xl overflow-hidden mb-4">
                             <Image
+                                key={selectedImageIndex} // Force re-render for smooth transition
                                 src={images[selectedImageIndex] || product.image_url}
                                 alt={product.name}
                                 fill
-                                className="object-cover"
+                                className="object-cover transition-opacity duration-300"
                                 priority
                                 sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 600px"
-                                quality={85}
+                                quality={75}
+                                placeholder="blur"
+                                blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAb/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWEREiMxUf/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
                             />
                             {hasDiscount && (
                                 <span className="absolute top-4 right-4 bg-[#DD3468] text-white text-xs font-bold px-3 py-1 uppercase rounded">
@@ -229,10 +259,19 @@ export default function ProductPage() {
                                     <button
                                         key={idx}
                                         onClick={() => setSelectedImageIndex(idx)}
-                                        className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all ${selectedImageIndex === idx ? 'border-[#DD3468]' : 'border-transparent'
+                                        onMouseEnter={() => setSelectedImageIndex(idx)}
+                                        className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all hover:border-[#DD3468]/50 ${selectedImageIndex === idx ? 'border-[#DD3468]' : 'border-transparent'
                                             }`}
                                     >
-                                        <Image src={img} alt={`${product.name} ${idx + 1}`} fill className="object-cover" sizes="(max-width: 768px) 25vw, 150px" loading="lazy" />
+                                        <Image
+                                            src={img}
+                                            alt={`${product.name} ${idx + 1}`}
+                                            fill
+                                            className="object-cover"
+                                            sizes="120px"
+                                            priority={idx < 4}
+                                            quality={60}
+                                        />
                                     </button>
                                 ))}
                             </div>
@@ -353,7 +392,7 @@ export default function ProductPage() {
                             onClick={() => {
                                 if (isComingSoon || isUnavailable) return;
                                 if (!selectedSize) {
-                                    alert('Por favor, selecione um tamanho');
+                                    showWarning('Por favor, selecione um tamanho');
                                     return;
                                 }
                                 const selectedVariant = variants.find(v => v.size === selectedSize);
@@ -369,9 +408,9 @@ export default function ProductPage() {
                                         stock: selectedVariant.stock,
                                         color: selectedVariant.color // Pass color to cart
                                     });
-                                    alert('Produto adicionado ao carrinho!');
+                                    showSuccess('Produto adicionado ao carrinho!');
                                 } else {
-                                    alert('Produto sem estoque');
+                                    showError('Produto sem estoque');
                                 }
                             }}
                             disabled={isComingSoon || isUnavailable || (!selectedSize && variants.length > 0) || (selectedSize && variants.find(v => v.size === selectedSize)?.stock === 0)}

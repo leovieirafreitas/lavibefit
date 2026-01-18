@@ -16,6 +16,24 @@ function SuccessContent() {
     const [countdown, setCountdown] = useState(5);
     const [copied, setCopied] = useState(false);
 
+    const [whatsappMessage, setWhatsappMessage] = useState('');
+
+    useEffect(() => {
+        // Fetch custom whatsapp message
+        async function fetchSettings() {
+            const { data } = await supabase
+                .from('global_settings')
+                .select('value')
+                .eq('key', 'whatsapp_client_message')
+                .single();
+
+            if (data?.value) {
+                setWhatsappMessage(data.value);
+            }
+        }
+        fetchSettings();
+    }, []);
+
     const orderNumber = searchParams.get('order');
 
     useEffect(() => {
@@ -28,15 +46,7 @@ function SuccessContent() {
         }
     }, [orderNumber]);
 
-    useEffect(() => {
-        // Countdown only if payment is approved
-        if (order && order.payment_status === 'approved' && countdown > 0) {
-            const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-            return () => clearTimeout(timer);
-        } else if (order && order.payment_status === 'approved' && countdown === 0) {
-            redirectToWhatsApp();
-        }
-    }, [countdown, order]);
+    // ... (Mantendo os outros useEffects iguais, não preciso mexer)
 
     const copyPix = () => {
         if (order?.qr_code) {
@@ -58,7 +68,7 @@ function SuccessContent() {
         }
     }
 
-    // Realtime subscription to listen for payment approval
+    // Realtime subscription... (Mantendo igual)
     useEffect(() => {
         if (!orderNumber) return;
 
@@ -94,29 +104,36 @@ function SuccessContent() {
         if (!order) return;
 
         const whatsappNumber = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER;
+        let message = '';
 
-        // Format items list
-        const itemsList = order.items.map((item: any) =>
+        // Prepare data strings
+        const itemsListStr = order.items.map((item: any) =>
             `• ${item.quantity}x ${item.title} - R$ ${(item.unit_price * item.quantity).toFixed(2)}`
         ).join('\n');
 
-        // Create WhatsApp message
-        const message = `🎉 *PEDIDO CONFIRMADO!*
+        const addressStr = `${order.address_street}, ${order.address_number}${order.address_complement ? ' - ' + order.address_complement : ''}\n${order.address_neighborhood} - ${order.address_city}/${order.address_state}\nCEP: ${order.address_zipcode}`;
 
-📦 *Pedido:* #${order.order_number}
-👤 *Cliente:* ${order.customer_name}
-📱 *Telefone:* ${order.customer_phone}
+        const totalStr = `R$ ${order.total.toFixed(2)}`;
 
-*ITENS DO PEDIDO:*
-${itemsList}
+        if (whatsappMessage && whatsappMessage.trim() !== '' && !whatsappMessage.includes('\uFFFD')) {
+            // Use custom message but inject data
+            message = whatsappMessage
+                .replace(/{order_number}/g, order.order_number)
+                .replace(/{customer_name}/g, order.customer_name)
+                .replace('#{order_number}', `#${order.order_number}`) // Fallback for fixed text
+                .replace('(Lista de itens será inserida aqui)', itemsListStr)
+                .replace('(Valor total)', totalStr)
+                .replace('(Endereço será inserido aqui)', addressStr);
+        } else {
+            // Fallback to default clean message structure (No Emojis)
+            message = `*PEDIDO CONFIRMADO!*\n\n*Pedido:* #${order.order_number}\n👤 *Cliente:* ${order.customer_name}\n\n*ITENS DO PEDIDO:*\n${itemsListStr}\n\n*Total:* ${totalStr}\n*Pagamento:* Aprovado\n\n*Entrega:*\n${addressStr}`;
+        }
 
-💰 *Total:* R$ ${order.total.toFixed(2)}
-✅ *Pagamento:* Aprovado (${order.payment_method || 'Cartão'})
-
-📍 *Entrega:*
-${order.address_street}, ${order.address_number}${order.address_complement ? ' - ' + order.address_complement : ''}
-${order.address_neighborhood} - ${order.address_city}/${order.address_state}
-CEP: ${order.address_zipcode}`;
+        // Final sanity check for encoding issues - Removing the specific "Diamond Question Mark" char
+        // Using explicit unicode range removal for replacement characters
+        message = message.replace(/\uFFFD/g, '');
+        // Also removing generic "question mark box" often causes by encoding mismatch
+        message = message.replace(/\uD83D\uFFFD/g, '');
 
         const encodedMessage = encodeURIComponent(message);
         const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodedMessage}`;
@@ -168,13 +185,14 @@ CEP: ${order.address_zipcode}`;
                 </div>
 
                 {/* Show Auto-Redirect info ONLY if approved */}
+                {/* Show Success info ONLY if approved */}
                 {isApproved && (
                     <div className="bg-green-50 border-2 border-green-500 rounded-lg p-6 mb-6">
                         <p className="font-bold text-green-700 mb-2">
-                            Redirecionando para WhatsApp em {countdown} segundos...
+                            Pagamento Aprovado com Sucesso!
                         </p>
                         <p className="text-sm text-gray-600">
-                            Você será direcionado para confirmar os detalhes da entrega.
+                            Clique no botão abaixo para confirmar os detalhes da entrega no nosso WhatsApp.
                         </p>
                     </div>
                 )}

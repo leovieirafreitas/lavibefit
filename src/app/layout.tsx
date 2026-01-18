@@ -3,6 +3,7 @@ import { Montserrat, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { CartProvider } from "@/contexts/CartContext";
 import { FavoritesProvider } from "@/contexts/FavoritesContext";
+import { ToastProvider } from "@/contexts/ToastContext";
 import PWARegister from "@/components/PWARegister";
 import { createClient } from '@supabase/supabase-js';
 import Script from 'next/script';
@@ -105,11 +106,13 @@ export default async function RootLayout({
     <html lang="pt-BR">
       <body className={`${montserrat.className} ${playfair.variable}`}>
         <PWARegister />
-        <FavoritesProvider>
-          <CartProvider>
-            {children}
-          </CartProvider>
-        </FavoritesProvider>
+        <ToastProvider>
+          <FavoritesProvider>
+            <CartProvider>
+              {children}
+            </CartProvider>
+          </FavoritesProvider>
+        </ToastProvider>
         <Script
           id="schema-org-local"
           type="application/ld+json"
