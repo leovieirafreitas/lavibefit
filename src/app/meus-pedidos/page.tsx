@@ -23,21 +23,20 @@ export default function MeusPedidosPage() {
         setHasSearched(true);
         setOrders([]);
 
-        let query = supabase
-            .from('orders')
-            .select('*')
-            .order('created_at', { ascending: false });
+        let searchVal = searchValue;
 
         if (searchType === 'cpf') {
-            const cpfClean = searchValue.replace(/\D/g, '');
-            query = query.eq('customer_cpf', cpfClean);
+            searchVal = searchValue.replace(/\D/g, '');
         } else {
             // Remove # if present
-            const orderNum = searchValue.replace('#', '').trim();
-            query = query.eq('order_number', orderNum);
+            searchVal = searchValue.replace('#', '').trim();
         }
 
-        const { data, error } = await query;
+        // Use RPC to securely search for public orders directly
+        const { data, error } = await supabase.rpc('get_orders_public', {
+            p_search_type: searchType,
+            p_search_value: searchVal
+        });
 
         if (error) {
             console.error(error);

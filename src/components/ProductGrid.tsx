@@ -9,7 +9,15 @@ interface ProductGridProps {
 }
 
 export default function ProductGrid({ initialProducts = [] }: ProductGridProps) {
-    const [products, setProducts] = useState<any[]>(initialProducts);
+    const [products, setProducts] = useState<any[]>(() => {
+        // Garantir unicidade na inicialização
+        const seen = new Set();
+        return initialProducts.filter(p => {
+            const duplicate = seen.has(p.id);
+            seen.add(p.id);
+            return !duplicate;
+        });
+    });
     const [loading, setLoading] = useState(false);
     // Se recebemos menos de 4 produtos inicialmente, assumimos que não tem mais.
     const [hasMore, setHasMore] = useState(initialProducts.length >= 4);
@@ -23,10 +31,15 @@ export default function ProductGrid({ initialProducts = [] }: ProductGridProps) 
             .from('products')
             .select('*, variants:product_variants(stock)')
             .order('display_order', { ascending: true })
+            .order('id', { ascending: false })
             .range(from, to);
 
         if (data && data.length > 0) {
-            setProducts(current => [...current, ...data]);
+            setProducts(current => {
+                // Filtra duplicatas comparando IDs como String para evitar erro de tipo
+                const newItems = data.filter(item => !current.some(curr => String(curr.id) === String(item.id)));
+                return [...current, ...newItems];
+            });
             if (data.length < 4) {
                 setHasMore(false);
             }

@@ -57,45 +57,32 @@ function SuccessContent() {
     };
 
     async function fetchOrder() {
-        const { data } = await supabase
-            .from('orders')
-            .select('*')
-            .eq('order_number', orderNumber)
-            .single();
+        try {
+            // Use RPC to bypass RLS safely since the user might be anonymous
+            const { data, error } = await supabase
+                .rpc('get_order_for_checkout', { p_order_number: orderNumber });
 
-        if (data) {
-            setOrder(data);
+            if (error) console.error('Error fetching order via RPC:', error);
+
+            if (data && data.length > 0) {
+                setOrder(data[0]);
+            }
+        } catch (err) {
+            console.error('Exception fetching order:', err);
         }
     }
 
-    // Realtime subscription... (Mantendo igual)
     useEffect(() => {
         if (!orderNumber) return;
 
-        const channel = supabase
-            .channel(`order-${orderNumber}`)
-            .on(
-                'postgres_changes',
-                {
-                    event: 'UPDATE',
-                    schema: 'public',
-                    table: 'orders',
-                    filter: `order_number=eq.${orderNumber}`
-                },
-                (payload: any) => {
-                    console.log('Ordem atualizada!', payload);
-                    if (payload.new) {
-                        setOrder(payload.new);
-                    }
-                }
-            )
-            .subscribe();
+        // Initial fetch
+        fetchOrder();
 
-        // Fallback polling every 5 seconds (just in case)
-        const interval = setInterval(fetchOrder, 5000);
+        // Polling every 3 seconds to update status (Pix payment etc)
+        // We use polling instead of Realtime here because Realtime respects RLS (which blocks anonymous users)
+        const interval = setInterval(fetchOrder, 3000);
 
         return () => {
-            supabase.removeChannel(channel);
             clearInterval(interval);
         };
     }, [orderNumber]);
