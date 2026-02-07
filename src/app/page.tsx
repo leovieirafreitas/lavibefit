@@ -2,32 +2,28 @@ import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
 import ProductGrid from "@/components/ProductGrid";
 
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
-export const fetchCache = 'force-no-store';
+// ⚡ CACHE AGRESSIVO HABILITADO - Revalida a cada 60 segundos
+export const dynamic = 'force-static';
+export const revalidate = 60; // Cache de 60 segundos
+export const fetchCache = 'default-cache';
 
 import Footer from "@/components/Footer";
-import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import Image from "next/image";
+import { getCachedHomeContent, getCachedSettings, getCachedProducts } from "@/lib/supabaseCache";
 
 async function getHomeData() {
-  // Fetch all data in parallel for better performance
+  // ⚡ Fetch all data in parallel with CACHE for blazing fast performance
   const [homeContent, settings, products] = await Promise.all([
-    supabase.from('home_content').select('*'),
-    supabase.from('global_settings').select('value').eq('key', 'top_bar_text').single(),
-    supabase
-      .from('products')
-      .select('*, variants:product_variants(stock)')
-      .order('display_order', { ascending: true })
-      .order('id', { ascending: false }) // Critério de desempate para consistência
-      .limit(4)
+    getCachedHomeContent(),
+    getCachedSettings('top_bar_text'),
+    getCachedProducts({ limit: 4 })
   ]);
 
   return {
-    homeContent: homeContent.data || [],
-    topBarText: settings.data?.value,
-    initialProducts: products.data || []
+    homeContent: homeContent || [],
+    topBarText: settings?.value,
+    initialProducts: products || []
   };
 }
 

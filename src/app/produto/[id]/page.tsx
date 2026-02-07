@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { supabase } from "@/lib/supabase";
+import { getCachedProduct, getCachedVariants, getCachedReviews, getCachedSettings } from "@/lib/supabaseCache";
 import { ShoppingBag, Heart, Star, ChevronLeft, ChevronRight } from 'lucide-react';
 import Image from 'next/image';
 import { useCart } from '@/contexts/CartContext';
@@ -80,38 +81,18 @@ export default function ProductPage() {
 
     async function fetchData() {
         try {
-            // Fetch all data in parallel for better performance
-            const [settingsResult, productResult, variantsResult, reviewsResult] = await Promise.all([
-                supabase
-                    .from('global_settings')
-                    .select('value')
-                    .eq('key', 'top_bar_text')
-                    .single(),
-                supabase
-                    .from('products')
-                    .select('*')
-                    .eq('id', productId)
-                    .single(),
-                supabase
-                    .from('product_variants')
-                    .select('*')
-                    .eq('product_id', productId)
-                    .order('size'),
-                supabase
-                    .from('product_reviews')
-                    .select('*')
-                    .eq('product_id', productId)
-                    .order('created_at', { ascending: false })
-                    .limit(6) // Limit reviews for faster loading
+            // ⚡ Fetch all data in parallel with CACHE for instant loading
+            const [settingsData, productData, variantsData, reviewsData] = await Promise.all([
+                getCachedSettings('top_bar_text'),
+                getCachedProduct(productId as string),
+                getCachedVariants(productId as string),
+                getCachedReviews(productId as string, 6)
             ]);
 
-            if (settingsResult.data) setTopBarText(settingsResult.data.value);
-
-            if (productResult.error) throw productResult.error;
-            setProduct(productResult.data);
-
-            setVariants(variantsResult.data || []);
-            setReviews(reviewsResult.data || []);
+            if (settingsData) setTopBarText(settingsData.value);
+            setProduct(productData);
+            setVariants(variantsData || []);
+            setReviews(reviewsData || []);
 
         } catch (error) {
             console.error('Error fetching product:', error);

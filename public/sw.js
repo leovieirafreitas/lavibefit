@@ -1,38 +1,46 @@
-// Service Worker para La Vibe Fit PWA
+/**
+ * Service Worker para Cache Offline
+ * Melhora drasticamente a performance ao cachear assets estáticos
+ */
+
 const CACHE_NAME = 'lavibefit-v1';
 const STATIC_CACHE = 'lavibefit-static-v1';
 const DYNAMIC_CACHE = 'lavibefit-dynamic-v1';
+const IMAGE_CACHE = 'lavibefit-images-v1';
 
-// Recursos para pré-cache
+// Assets para cachear imediatamente
 const STATIC_ASSETS = [
     '/',
     '/manifest.json',
-    '/icon-192x192.png',
-    '/icon-512x512.png',
+    '/favicon.ico',
 ];
 
-// Instalação do Service Worker
+// Instalar Service Worker
 self.addEventListener('install', (event) => {
     console.log('[SW] Installing Service Worker...');
     event.waitUntil(
         caches.open(STATIC_CACHE).then((cache) => {
-            console.log('[SW] Precaching App Shell');
+            console.log('[SW] Precaching static assets');
             return cache.addAll(STATIC_ASSETS);
         })
     );
     self.skipWaiting();
 });
 
-// Ativação do Service Worker
+// Ativar Service Worker
 self.addEventListener('activate', (event) => {
     console.log('[SW] Activating Service Worker...');
     event.waitUntil(
-        caches.keys().then((keyList) => {
+        caches.keys().then((cacheNames) => {
             return Promise.all(
-                keyList.map((key) => {
-                    if (key !== STATIC_CACHE && key !== DYNAMIC_CACHE) {
-                        console.log('[SW] Removing old cache:', key);
-                        return caches.delete(key);
+                cacheNames.map((cacheName) => {
+                    if (
+                        cacheName !== STATIC_CACHE &&
+                        cacheName !== DYNAMIC_CACHE &&
+                        cacheName !== IMAGE_CACHE
+                    ) {
+                        console.log('[SW] Deleting old cache:', cacheName);
+                        return caches.delete(cacheName);
                     }
                 })
             );
@@ -41,52 +49,71 @@ self.addEventListener('activate', (event) => {
     return self.clients.claim();
 });
 
-// Estratégia de cache
+// Interceptar requisições
 self.addEventListener('fetch', (event) => {
     const { request } = event;
     const url = new URL(request.url);
 
-    // Ignorar requisições não-GET
-    if (request.method !== 'GET') return;
-
-    // Ignorar requisições de API do Supabase (sempre buscar da rede)
+    // Ignorar requisições do Supabase (sempre buscar dados frescos)
     if (url.hostname.includes('supabase.co')) {
         return;
     }
 
-    // Ignorar requisições de API internas
-    if (url.pathname.startsWith('/api/')) {
+    // Estratégia: Cache First para imagens
+    if (request.destination === 'image') {
+        event.respondWith(
+            caches.match(request).then((response) => {
+                if (response) {
+                    console.log('[SW] Serving image from cache:', url.pathname);
+                    return response;
+                }
+
+                return fetch(request).then((fetchResponse) => {
+                    return caches.open(IMAGE_CACHE).then((cache) => {
+                        // Cachear apenas imagens bem-sucedidas
+                        if (fetchResponse.status === 200) {
+                            cache.put(request, fetchResponse.clone());
+                        }
+                        return fetchResponse;
+                    });
+                });
+            })
+        );
         return;
     }
 
-    event.respondWith(
-        caches.match(request).then((cachedResponse) => {
-            // Se encontrou no cache, retorna
-            if (cachedResponse) {
-                return cachedResponse;
-            }
-
-            // Senão, busca da rede e armazena no cache dinâmico
-            return fetch(request)
+    // Estratégia: Network First para páginas HTML
+    if (request.destination === 'document') {
+        event.respondWith(
+            fetch(request)
                 .then((response) => {
-                    // Não cachear respostas inválidas
-                    if (!response || response.status !== 200 || response.type === 'error') {
-                        return response;
-                    }
-
-                    // Clonar a resposta
-                    const responseToCache = response.clone();
-
+                    const responseClone = response.clone();
                     caches.open(DYNAMIC_CACHE).then((cache) => {
-                        cache.put(request, responseToCache);
+                        cache.put(request, responseClone);
                     });
-
                     return response;
                 })
                 .catch(() => {
-                    // Se falhar, tentar retornar a página offline (se existir)
-                    return caches.match('/');
-                });
+                    return caches.match(request);
+                })
+        );
+        return;
+    }
+
+    // Estratégia: Cache First para assets estáticos (CSS, JS, fonts)
+    event.respondWith(
+        caches.match(request).then((response) => {
+            return (
+                response ||
+                fetch(request).then((fetchResponse) => {
+                    return caches.open(STATIC_CACHE).then((cache) => {
+                        if (fetchResponse.status === 200) {
+                            cache.put(request, fetchResponse.clone());
+                        }
+                        return fetchResponse;
+                    });
+                })
+            );
         })
     );
 });

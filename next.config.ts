@@ -13,22 +13,24 @@ const nextConfig: NextConfig = {
         hostname: 'jcytqknxxcqkfraonhwr.supabase.co',
       },
     ],
-    // Otimizações de imagem
-    formats: ['image/webp', 'image/avif'], // Formatos modernos e mais leves
-    deviceSizes: [640, 750, 828, 1080, 1200, 1920], // Tamanhos responsivos
-    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384], // Tamanhos para ícones
-    minimumCacheTTL: 60 * 60 * 24 * 7, // Cache de 7 dias (otimizado)
+    // ⚡ Otimizações AGRESSIVAS de imagem
+    formats: ['image/avif', 'image/webp'], // AVIF primeiro (menor tamanho)
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    minimumCacheTTL: 60 * 60 * 24 * 30, // Cache de 30 dias (máximo)
     dangerouslyAllowSVG: true,
     contentDispositionType: 'attachment',
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
-    // Loader customizado para melhor performance
     loader: 'default',
-    // Desabilitar otimização automática em dev para velocidade
-    unoptimized: process.env.NODE_ENV === 'development' ? false : false,
+    unoptimized: false, // Sempre otimizar
   },
-  // Otimizações gerais
-  compress: true, // Compressão gzip
-  poweredByHeader: false, // Remove header desnecessário
+  // ⚡ Otimizações gerais
+  compress: true, // Compressão gzip/brotli
+  poweredByHeader: false,
+  // Experimental: Otimizações extras
+  experimental: {
+    optimizePackageImports: ['lucide-react'],
+  },
 };
 
 export default nextConfig;
