@@ -82,6 +82,7 @@ export default async function Home() {
                   src={arrivalsBlock.mobile_image_url || arrivalsBlock.image_url!}
                   alt="Lançamentos"
                   fill
+                  sizes="100vw"
                   className="object-cover"
                   quality={70}
                   loading="lazy"
@@ -109,6 +110,7 @@ export default async function Home() {
                     src={promoBlock.image_url}
                     alt={promoBlock.title || 'Promo'}
                     fill
+                    sizes="(max-width: 768px) 100vw, 50vw"
                     className="object-cover"
                     quality={70}
                     loading="lazy"

@@ -35,6 +35,14 @@ async function getSeoSettings() {
   }
 }
 
+export const viewport = {
+  themeColor: '#0052A3',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+};
+
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getSeoSettings();
 
@@ -46,13 +54,6 @@ export async function generateMetadata(): Promise<Metadata> {
     icons: {
       icon: '/favicon.ico',
       apple: '/apple-touch-icon.png',
-    },
-    themeColor: '#0052A3',
-    viewport: {
-      width: 'device-width',
-      initialScale: 1,
-      maximumScale: 5,
-      userScalable: true,
     },
     appleWebApp: {
       capable: true,
