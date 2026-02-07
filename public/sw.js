@@ -50,70 +50,76 @@ self.addEventListener('activate', (event) => {
 });
 
 // Interceptar requisições
+// Interceptar requisições e gerenciar cache
 self.addEventListener('fetch', (event) => {
     const { request } = event;
     const url = new URL(request.url);
 
-    // Ignorar requisições do Supabase (sempre buscar dados frescos)
-    if (url.hostname.includes('supabase.co')) {
-        return;
+    // 1. IGNORAR requisições que não devem ser cacheadas
+    // - Supabase (dados frescos sempre)
+    // - API local (serverless functions)
+    // - Next.js Data (JSONs de navegação)
+    // - Admin pages (nunca cachear admin)
+    // - Documentos HTML (para garantir que atualizações de deploy apareçam)
+    if (
+        url.hostname.includes('supabase.co') ||
+        url.pathname.startsWith('/api/') ||
+        url.pathname.startsWith('/_next/data/') ||
+        url.pathname.includes('/admin') ||
+        request.destination === 'document' // ⚡ CRÍTICO: Não cachear HTML para evitar "site preso" em versão antiga
+    ) {
+        return; // Network Only (padrão do navegador)
     }
 
-    // Estratégia: Cache First para imagens
+    // 2. ESTRATÉGIA PARA IMAGENS (Cache First) -> Otimização de Performance
+    // Imagens mudam pouco e são pesadas. Cache agressivo aqui é bom.
     if (request.destination === 'image') {
         event.respondWith(
             caches.match(request).then((response) => {
                 if (response) {
-                    console.log('[SW] Serving image from cache:', url.pathname);
+                    // Retorna do cache se tiver
                     return response;
                 }
 
                 return fetch(request).then((fetchResponse) => {
-                    return caches.open(IMAGE_CACHE).then((cache) => {
-                        // Cachear apenas imagens bem-sucedidas
-                        if (fetchResponse.status === 200) {
-                            cache.put(request, fetchResponse.clone());
-                        }
+                    // Apenas cacheia respostas válidas e completas
+                    if (!fetchResponse || fetchResponse.status !== 200 || fetchResponse.type !== 'basic') {
                         return fetchResponse;
+                    }
+
+                    const responseToCache = fetchResponse.clone();
+                    caches.open(IMAGE_CACHE).then((cache) => {
+                        cache.put(request, responseToCache);
                     });
+                    return fetchResponse;
                 });
             })
         );
         return;
     }
 
-    // Estratégia: Network First para páginas HTML
-    if (request.destination === 'document') {
+    // 3. ESTRATÉGIA PARA ASSETS ESTÁTICOS (JS, CSS, Fonts) -> Cache First
+    // Next.js gera hashes nos nomes dos arquivos (ex: main-a1b2c3.js).
+    // Se o conteúdo mudar, o nome muda, então é seguro cachear.
+    if (
+        request.destination === 'script' ||
+        request.destination === 'style' ||
+        request.destination === 'font'
+    ) {
         event.respondWith(
-            fetch(request)
-                .then((response) => {
-                    const responseClone = response.clone();
-                    caches.open(DYNAMIC_CACHE).then((cache) => {
-                        cache.put(request, responseClone);
-                    });
-                    return response;
-                })
-                .catch(() => {
-                    return caches.match(request);
-                })
+            caches.match(request).then((response) => {
+                return (
+                    response ||
+                    fetch(request).then((fetchResponse) => {
+                        return caches.open(STATIC_CACHE).then((cache) => {
+                            if (fetchResponse.status === 200) {
+                                cache.put(request, fetchResponse.clone());
+                            }
+                            return fetchResponse;
+                        });
+                    })
+                );
+            })
         );
-        return;
     }
-
-    // Estratégia: Cache First para assets estáticos (CSS, JS, fonts)
-    event.respondWith(
-        caches.match(request).then((response) => {
-            return (
-                response ||
-                fetch(request).then((fetchResponse) => {
-                    return caches.open(STATIC_CACHE).then((cache) => {
-                        if (fetchResponse.status === 200) {
-                            cache.put(request, fetchResponse.clone());
-                        }
-                        return fetchResponse;
-                    });
-                })
-            );
-        })
-    );
 });
