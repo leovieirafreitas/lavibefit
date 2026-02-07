@@ -280,7 +280,7 @@ export default function Navbar({ initialTopBarText }: { initialTopBarText?: stri
                                         >
                                             <div className="w-16 h-16 bg-gray-100 rounded overflow-hidden flex-shrink-0 relative">
                                                 {product.image_url && (
-                                                    <Image src={product.image_url} alt={product.name} fill className="object-cover" />
+                                                    <Image src={product.image_url} alt={product.name} fill sizes="64px" className="object-cover" />
                                                 )}
                                             </div>
                                             <div className="flex-1">

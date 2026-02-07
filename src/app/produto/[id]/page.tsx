@@ -48,7 +48,9 @@ export default function ProductPage() {
         }
     }, [variants]);
 
-    // Preload all product images for instant switching
+    // Preload manual removido para evitar competição de banda. O Next/Image gerencia o carregamento melhor.
+    // O priority na imagem principal já garante o LCP.
+    /*
     useEffect(() => {
         if (!product) return;
 
@@ -73,6 +75,7 @@ export default function ProductPage() {
             .then(() => setImagesPreloaded(true))
             .catch(() => setImagesPreloaded(true)); // Continue even if some fail
     }, [product]);
+    */
 
     // Clear size if color changes (optional, but safer)
     useEffect(() => {
@@ -219,10 +222,13 @@ export default function ProductPage() {
                                 src={images[selectedImageIndex] || product.image_url}
                                 alt={product.name}
                                 fill
-                                className="object-cover transition-opacity duration-300"
-                                priority
-                                sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 600px"
-                                quality={75}
+                                // Removida transition-opacity para renderização imediata
+                                className="object-cover"
+                                priority={true} // Prioridade máxima
+                                loading="eager"
+                                sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 600px"
+                                quality={70} // 70 é o sweet spot entre qualidade e velocidade
+                                // Mantendo blur para UX, mas a imagem real deve carregar mais rápido com quality menor
                                 placeholder="blur"
                                 blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAb/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWEREiMxUf/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
                             />

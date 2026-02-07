@@ -130,9 +130,9 @@ if (typeof window !== 'undefined') {
  * TTLs pré-configurados para diferentes tipos de dados
  */
 export const CacheTTL = {
-    PRODUCTS: 2 * 60 * 1000,        // 2 minutos - produtos mudam com frequência
+    PRODUCTS: 15 * 1000,            // 15 segundos - para mudanças no admin aparecerem rápido
     SETTINGS: 5 * 60 * 1000,        // 5 minutos - configurações raramente mudam
-    HOME_CONTENT: 3 * 60 * 1000,    // 3 minutos - conteúdo da home
+    HOME_CONTENT: 30 * 1000,        // 30 segundos - conteúdo da home
     REVIEWS: 10 * 60 * 1000,        // 10 minutos - reviews não mudam muito
-    VARIANTS: 2 * 60 * 1000,        // 2 minutos - estoque pode mudar
+    VARIANTS: 15 * 1000,            // 15 segundos - estoque pode mudar
 } as const;
